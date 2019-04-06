@@ -9,7 +9,7 @@ println("# Pulling most recent version, just to be sure.")
 flush(stdout)
 run(`git pull`)
 
-include("deps/init_modules.jl")
+include("init_modules.jl")
 
 cd(start_dir)
 
