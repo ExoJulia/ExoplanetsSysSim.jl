@@ -1,0 +1,4 @@
+.gitmodules
+deps/build.log
+data
+data/*
