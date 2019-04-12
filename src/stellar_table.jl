@@ -35,7 +35,7 @@ end
 
 function setup(filename::String; force_reread::Bool = false)
   global df
-  if occursin(r".jld2$",filename)
+  if occursin(r".jld2$",filename) || occursin(r".jld$",filename)
   #if occursin(r".jld$",filename)
   try
     data = load(filename)
