@@ -15,7 +15,7 @@ function depth_at_midpoint(radius_ratio::Float64, ld::LimbDarkeningParamLinear)
     ksq = 1-radius_ratio^2
     tmp0 = c0/4*ksq
     tmp2 = ld.coeff[1]/6*ksq^(3//2)
-    return  (tmp0+tmp2)/omega
+    return  radius_ratio*(tmp0+tmp2)/omega
 end
 
 function ratio_from_depth(depth::Float64, ld::LimbDarkeningParamLinear)
@@ -53,7 +53,7 @@ function depth_at_midpoint(radius_ratio::Float64, ld::LimbDarkeningParamQuadrati
     tmp0 = c0/4*ksq
     tmp2 = (ld.coeff[1]+2*ld.coeff[2])/6*ksq^(3//2)
     tmp4 = -ld.coeff[2]/8*ksq^2
-    return  (tmp0+tmp2+tmp4)/omega
+    return  radius_ratio*(tmp0+tmp2+tmp4)/omega
 end
 
 function ratio_from_depth(depth::Float64, ld::LimbDarkeningParamQuadratic)
@@ -95,7 +95,7 @@ function depth_at_midpoint(radius_ratio::Float64, ld::LimbDarkeningParam4thOrder
     tmp2 = ld.coeff[2]/6*ksq^(3//2)
     tmp3 = ld.coeff[3]/7*ksq^(7//4)
     tmp4 = ld.coeff[4]/8*ksq^2
-    return (tmp0+tmp1+tmp2+tmp3+tmp4)/omega
+    return radius_ratio*(tmp0+tmp1+tmp2+tmp3+tmp4)/omega
 end
 
 # Cite Mandel & Agol 2002
