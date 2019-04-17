@@ -22,7 +22,6 @@ struct StarObs
   id::Int64            # row number in stellar dataframe
 end
 
-
 period(obs::TransitPlanetObs) = obs.period
 depth(obs::TransitPlanetObs) = obs.depth
 duration(obs::TransitPlanetObs) = obs.duration
@@ -38,10 +37,8 @@ end
 
 function calc_transit_depth(t::KeplerTarget, s::Integer, p::Integer)  # WARNING: IMPORTANT: Assumes non-grazing transit
   radius_ratio = t.sys[s].planet[p].radius/t.sys[s].star.radius
-  # depth = radius_ratio^2 # TODO SCI DETAIL: Include limb darkening?
   #b = calc_impact_parameter(t.sys[s].planet, p) # If limb darkening should know about which chord the planet takes set b to impact parameter, rather than 0.0.
-  #depth = depth_small_planet(radius_ratio, b, t.sys[s].star.ld)   # TODO Add limb darkening here .  When limb darkening is implemented, then we should update calc_snr_if_transit in transit_detection_model to not convert transit depth to tps deth.
-  depth = depth_at_midpoint(radius_ratio, t.sys[s].star.ld)   # TODO Add limb darkening here.  When limb darkening is implemented, then we should update calc_snr_if_transit in transit_detection_model to not convert transit depth to tps deth.
+  depth = depth_at_midpoint(radius_ratio, t.sys[s].star.ld)   # Includes limb darkening
   depth *=  flux(t.sys[s].star)/flux(t)                      # Flux ratio accounts for dilution
 end
 
@@ -105,6 +102,16 @@ calc_transit_duration_central(ps::PlanetarySystemAbstract, pl::Integer) = calc_t
 calc_transit_duration_central(t::KeplerTarget, s::Integer, p::Integer) = calc_transit_duration_central(t.sys[s],p)
 
 function calc_transit_duration_factor_for_impact_parameter_b(b::T, p::T)  where T <:Real
+    @assert(zero(b)<=b)         # b = Impact Parameter
+    @assert(zero(p)<=p<one(p))  # p = R_p/R_star
+    if b < 1-p
+          duration_ratio = sqrt((1-b)*(1+b))  # Approximation to (sqrt((1+p)^2-b^2)+sqrt((1-p)^2-b^2))/2, which is itself an approximation
+    else
+          return zero(b)
+    end
+end
+
+function calc_transit_duration_eff_factor_for_impact_parameter_b(b::T, p::T)  where T <:Real
   @assert(zero(b)<=b)         # b = Impact Parameter
   @assert(zero(p)<=p<one(p))  # p = R_p/R_star
   if b < 1-3p                 # Far enough from grazing for approximation
@@ -170,6 +177,7 @@ function calc_depth_correction_for_grazing_transit(b::T, p::T)  where T <:Real
     return area_ratio
 end
 
+# Transit durations to be used for observations of transit duration
 
 function calc_transit_duration_small_angle_approx(ps::PlanetarySystemAbstract, pl::Integer)
   a = semimajor_axis(ps,pl)
@@ -180,7 +188,7 @@ function calc_transit_duration_small_angle_approx(ps::PlanetarySystemAbstract, p
   size_ratio = ps.planet[pl].radius/ps.star.radius
   @assert !isnan(b)
   @assert zero(b)<=b
-  if b>one(b)+size_ratio
+  if b>one(b)-size_ratio
      return zero(b)
   end
   duration_central_circ = calc_transit_duration_central_circ(ps,pl)
@@ -203,7 +211,7 @@ function calc_transit_duration_winn2010(ps::PlanetarySystemAbstract, pl::Integer
   size_ratio = ps.planet[pl].radius/ps.star.radius
   @assert !isnan(b)
   @assert zero(b)<=b
-  if b>one(b)+size_ratio
+  if b>one(b)-size_ratio
      return zero(b)
   end
   duration_central_circ = calc_transit_duration_central_circ(ps,pl)
@@ -215,7 +223,7 @@ function calc_transit_duration_winn2010(ps::PlanetarySystemAbstract, pl::Integer
   radial_separation_over_a = (1+ecc)*(1-ecc)/one_plus_e_sin_w
   duration_ratio_for_impact_parameter = calc_transit_duration_factor_for_impact_parameter_b(b,size_ratio)
 
-  # WARNING: This is technically an approximation.  It avoids small angle for non-grazing transits, but does use a variant of the small angle approximation for nearly and grazing transits.
+  # WARNING: This is technically an approximation.  It avoids small angle for non-grazing transits, but does use a variant of the small angle approximation for nearly grazing transits.
   asin_arg = (arcsin_circ_central * duration_ratio_for_impact_parameter)
   duration = ps.orbit[pl].P/pi * radial_separation_over_a/sqrt_one_minus_e_sq * (asin_arg < 1.0 ? asin(asin_arg) : 1.0)
   duration = duration_central_cric * radial_separation_over_a/sqrt_one_minus_e_sq * (asin_arg < 1.0 ? asin(asin_arg) : 1.0)/arcsin_circ_central
@@ -231,7 +239,7 @@ function calc_transit_duration_kipping2010(ps::PlanetarySystemAbstract, pl::Inte
   size_ratio = ps.planet[pl].radius/ps.star.radius
   @assert !isnan(b)
   @assert zero(b)<=b
-  if b>one(b)+size_ratio
+  if b>one(b)-size_ratio
      return zero(b)
   end
   duration_central_circ = calc_transit_duration_central_circ(ps,pl)
@@ -243,7 +251,7 @@ function calc_transit_duration_kipping2010(ps::PlanetarySystemAbstract, pl::Inte
   radial_separation_over_a = (1+ecc)*(1-ecc)/one_plus_e_sin_w
   duration_ratio_for_impact_parameter = calc_transit_duration_factor_for_impact_parameter_b(b,size_ratio)
 
-  # WARNING: This is technically an approximation (see Kipping 2010 Eqn 15).  It avoids small angle for non-grazing transits, but does use a variant of the small angle approximation for nearly and grazing transits.
+  # WARNING: This is technically an approximation (see Kipping 2010 Eqn 15).  It avoids small angle for non-grazing transits, but does use a variant of the small angle approximation for nearly grazing transits.
   asin_arg = (arcsin_circ_central * duration_ratio_for_impact_parameter/radial_separation_over_a)
   duration = ps.orbit[pl].P/pi * radial_separation_over_a^2/sqrt_one_minus_e_sq * (asin_arg < 1.0 ? asin(asin_arg) : 1.0)
   #duration = duration_central_circ * radial_separation_over_a^2/sqrt_one_minus_e_sq * (asin_arg < 1.0 ? asin(asin_arg) : 1.0)/arcsin_circ_central
@@ -254,6 +262,93 @@ calc_transit_duration_kipping2010(t::KeplerTarget, s::Integer, p::Integer ) = ca
 #calc_transit_duration(ps::PlanetarySystemAbstract, pl::Integer) = calc_transit_duration_winn2010(ps,pl)
 calc_transit_duration(ps::PlanetarySystemAbstract, pl::Integer) = calc_transit_duration_kipping2010(ps,pl)
 calc_transit_duration(t::KeplerTarget, s::Integer, p::Integer ) = calc_transit_duration(t.sys[s],p)
+
+# Effective transit durations to be used for SNR calculations
+
+function calc_transit_duration_eff_small_angle_approx(ps::PlanetarySystemAbstract, pl::Integer)
+  a = semimajor_axis(ps,pl)
+  @assert a>=zero(a)
+  ecc = ps.orbit[pl].ecc
+  @assert zero(ecc)<=ecc<=one(ecc)
+  b = calc_impact_parameter(ps, pl)
+  size_ratio = ps.planet[pl].radius/ps.star.radius
+  @assert !isnan(b)
+  @assert zero(b)<=b
+  if b>one(b)+size_ratio
+     return zero(b)
+  end
+  duration_central_circ = calc_transit_duration_eff_central_circ(ps,pl)
+  duration_ratio_for_impact_parameter = calc_transit_duration_eff_factor_for_impact_parameter_b(b,size_ratio)
+
+  one_plus_e_sin_w = 1+ecc*sin(ps.orbit[pl].omega)
+  sqrt_one_minus_e_sq = sqrt((1+ecc)*(1-ecc))
+  vel_fac = sqrt_one_minus_e_sq / one_plus_e_sin_w
+
+  duration = duration_central_circ * duration_ratio_for_impact_parameter * vel_fac
+end
+calc_transit_duration_eff_small_angle_approx(t::KeplerTarget, s::Integer, p::Integer ) = calc_transit_duration_eff_small_angle_approx(t.sys[s],p)
+
+function calc_transit_duration_eff_winn2010(ps::PlanetarySystemAbstract, pl::Integer)
+  a = semimajor_axis(ps,pl)
+  @assert a>=zero(a)
+  ecc = ps.orbit[pl].ecc
+  @assert zero(ecc)<=ecc<=one(ecc)
+  b = calc_impact_parameter(ps, pl)
+  size_ratio = ps.planet[pl].radius/ps.star.radius
+  @assert !isnan(b)
+  @assert zero(b)<=b
+  if b>one(b)+size_ratio
+     return zero(b)
+  end
+  duration_central_circ = calc_transit_duration_eff_central_circ(ps,pl)
+  arcsin_circ_central = pi/ps.orbit[pl].P*duration_central_circ
+
+  one_plus_e_sin_w = 1+ecc*sin(ps.orbit[pl].omega)
+  sqrt_one_minus_e_sq = sqrt((1+ecc)*(1-ecc))
+  vel_fac = sqrt_one_minus_e_sq / one_plus_e_sin_w
+  radial_separation_over_a = (1+ecc)*(1-ecc)/one_plus_e_sin_w
+  duration_ratio_for_impact_parameter = calc_transit_duration_eff_factor_for_impact_parameter_b(b,size_ratio)
+
+  # WARNING: This is technically an approximation.  It avoids small angle for non-grazing transits, but does use a variant of the small angle approximation for nearly and grazing transits.
+  asin_arg = (arcsin_circ_central * duration_ratio_for_impact_parameter)
+  duration = ps.orbit[pl].P/pi * radial_separation_over_a/sqrt_one_minus_e_sq * (asin_arg < 1.0 ? asin(asin_arg) : 1.0)
+  duration = duration_central_cric * radial_separation_over_a/sqrt_one_minus_e_sq * (asin_arg < 1.0 ? asin(asin_arg) : 1.0)/arcsin_circ_central
+end
+calc_transit_duration_eff_winn2010(t::KeplerTarget, s::Integer, p::Integer ) = calc_transit_duration_eff_winn2010(t.sys[s],p)
+
+function calc_transit_duration_eff_kipping2010(ps::PlanetarySystemAbstract, pl::Integer)
+  a = semimajor_axis(ps,pl)
+  @assert a>=zero(a)
+  ecc = ps.orbit[pl].ecc
+  @assert zero(ecc)<=ecc<=one(ecc)
+  b = calc_impact_parameter(ps, pl)
+  size_ratio = ps.planet[pl].radius/ps.star.radius
+  @assert !isnan(b)
+  @assert zero(b)<=b
+  if b>one(b)+size_ratio
+     return zero(b)
+  end
+  duration_central_circ = calc_transit_duration_eff_central_circ(ps,pl)
+  arcsin_circ_central = pi/ps.orbit[pl].P*duration_central_circ
+
+  one_plus_e_sin_w = 1+ecc*sin(ps.orbit[pl].omega)
+  sqrt_one_minus_e_sq = sqrt((1+ecc)*(1-ecc))
+  vel_fac = sqrt_one_minus_e_sq / one_plus_e_sin_w
+  radial_separation_over_a = (1+ecc)*(1-ecc)/one_plus_e_sin_w
+  duration_ratio_for_impact_parameter = calc_transit_duration_eff_factor_for_impact_parameter_b(b,size_ratio)
+
+  # WARNING: This is technically an approximation (see Kipping 2010 Eqn 15).  It avoids small angle for non-grazing transits, but does use a variant of the small angle approximation for nearly and grazing transits.
+  asin_arg = (arcsin_circ_central * duration_ratio_for_impact_parameter/radial_separation_over_a)
+  duration = ps.orbit[pl].P/pi * radial_separation_over_a^2/sqrt_one_minus_e_sq * (asin_arg < 1.0 ? asin(asin_arg) : 1.0)
+  #duration = duration_central_circ * radial_separation_over_a^2/sqrt_one_minus_e_sq * (asin_arg < 1.0 ? asin(asin_arg) : 1.0)/arcsin_circ_central
+end
+calc_transit_duration_eff_kipping2010(t::KeplerTarget, s::Integer, p::Integer ) = calc_transit_duration_eff_kipping2010(t.sys[s],p)
+
+#calc_transit_duration_eff(ps::PlanetarySystemAbstract, pl::Integer) = calc_transit_duration_eff_small_angle_approx(ps,pl)
+#calc_transit_duration_eff(ps::PlanetarySystemAbstract, pl::Integer) = calc_transit_duration_eff_winn2010(ps,pl)
+calc_transit_duration_eff(ps::PlanetarySystemAbstract, pl::Integer) = calc_transit_duration_eff_kipping2010(ps,pl)
+calc_transit_duration_eff(t::KeplerTarget, s::Integer, p::Integer ) = calc_transit_duration_eff(t.sys[s],p)
+
 
 function calc_expected_num_transits(t::KeplerTarget, s::Integer, p::Integer, sim_param::SimParam)
  period = t.sys[s].orbit[p].P
@@ -273,7 +368,6 @@ mutable struct KeplerTargetObs                        # QUERY:  Do we want to ma
 
   prob_detect::SystemDetectionProbsAbstract  # QUERY: Specialize type of prob_detect depending on whether for simulated or real data?
 
-  #has_sc::Vector{Bool}                      # TODO OPT: Make Immutable Vector or BitArray to reduce memory use?
   has_sc::BitArray{1}                        # WARNING: Changed from Array{Bool}.  Alternatively, we could try StaticArray{Bool} so fixed size?  Do we even need to keep this?
 
   star::StarObs
@@ -333,9 +427,9 @@ function calc_target_obs_sky_ave(t::KeplerTarget, sim_param::SimParam)
            pdet_this_b = 0.0
            for j in 1:max_num_b_tries
               b = rand()
-              transit_duration_factor = calc_effective_transit_duration_factor_for_impact_parameter_b(b,size_ratio)
+              transit_duration_factor = calc_effective_transit_duration_eff_factor_for_impact_parameter_b(b,size_ratio)
 
-	      duration = duration_central * transit_duration_factor   # WARNING:  Technically, this duration may be slightly reduced for grazing cases to account for reduction in SNR due to planet not being completely inscribed by star at mid-transit.  But this will be a smaller effect than limb-darkening for grazing transits.  Also, makes a variant of the small angle approximation
+	          duration = duration_central * transit_duration_factor   # WARNING:  Technically, this duration may be slightly reduced for grazing cases to account for reduction in SNR due to planet not being completely inscribed by star at mid-transit.  But this will be a smaller effect than limb-darkening for grazing transits.  Also, makes a variant of the small angle approximation
 
               # cdpp = interpolate_cdpp_to_duration(t, duration)
               # snr = snr_central * (cdpp_central/cdpp) * sqrt(transit_duration_factor)
@@ -352,7 +446,12 @@ function calc_target_obs_sky_ave(t::KeplerTarget, sim_param::SimParam)
 
               if pdet_this_b >= threshold_pdet_ratio * pdet_central
                   #println("# Adding pdet_this_b = ", pdet_this_b, " pdet_c = ", pdet_central, " snr= ",snr, " cdpp= ",cdpp, " duration= ",duration, " b=",b, " u01= ", threshold_pdet_ratio)
-	         pdet[p] = pdet_ave*pvet
+	                 pdet[p] = pdet_ave*pvet
+#####
+                     duration_central = calc_transit_duration_central(t,s,p)
+                     transit_duration_factor = calc_effective_transit_duration_factor_for_impact_parameter_b(b,size_ratio)
+                     duration = duration_central * transit_duration_factor   # WARNING:  Makes a variant of the small angle approximation
+####
                  obs[i], sigma[i] = transit_noise_model(t, s, p, depth, duration, snr, ntr, b=b)
       	         i += 1
                  break
@@ -399,7 +498,7 @@ function calc_target_obs_single_obs(t::KeplerTarget, sim_param::SimParam)
       if get(sim_param,"verbose",false)
          println("# s=",s, " p=",p," num_sys= ",length(t.sys), " num_pl= ",num_planets(sys) )
       end
-        duration = calc_transit_duration(t,s,p)
+        duration = calc_transit_duration_eff(t,s,p)
 	if duration <= 0.
 	   continue
 	end
@@ -428,6 +527,7 @@ function calc_target_obs_single_obs(t::KeplerTarget, sim_param::SimParam)
 	if pdet[p] > min_detect_prob_to_be_included
            pvet = vetting_efficiency(t.sys[s].planet[p].radius, period) # TODO: Ask Danely about this line
            pdet[p] *= pvet
+           duration = calc_transit_duration(t,s,p)
             obs[i], sigma[i] = transit_noise_model(t, s, p, depth, duration, snr, ntr)
       	   i += 1
 	end
@@ -476,7 +576,6 @@ randtn() = rand(TruncatedNormal(0.0,1.0,-0.999,0.999))
 
 function transit_noise_model_no_noise(t::KeplerTarget, s::Integer, p::Integer, depth::Float64, duration::Float64, snr::Float64, num_tr::Float64; b::Float64 = 0.0)
   period = t.sys[s].orbit[p].P
-  #t0 = rand(Uniform(0.0,period))    # WARNING: Not being calculated from orbit
   t0 = period*rand()    # WARNING: Not being calculated from orbit
   sigma_period = 0.0
   sigma_t0 = 0.0
@@ -489,7 +588,6 @@ end
 
 function transit_noise_model_fixed_noise(t::KeplerTarget, s::Integer, p::Integer, depth::Float64, duration::Float64, snr::Float64, num_tr::Float64; b::Float64 = 0.0)
   period = t.sys[s].orbit[p].P
-  #t0 = rand(Uniform(0.0,period))   # WARNING: Not being calculated from orbit
   t0 = period*rand()    # WARNING: Not being calculated from orbit
 
   sigma_period = 1e-6
@@ -505,7 +603,6 @@ end
 
 function transit_noise_model_diagonal(t::KeplerTarget, s::Integer, p::Integer, depth::Float64, duration::Float64, snr::Float64, num_tr::Float64; b::Float64 = calc_impact_parameter(t.sys[s],p) )
   period = t.sys[s].orbit[p].P
-  #t0 = rand(Uniform(0.0,period))    # WARNING: Not being calculated from orbit
   t0 = period*rand()    # WARNING: Not being calculated from orbit
 
 	# Use variable names from Price & Rogers

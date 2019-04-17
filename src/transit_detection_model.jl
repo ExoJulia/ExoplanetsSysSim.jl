@@ -172,7 +172,7 @@ function vetting_efficiency_dr25_mulders_score_cut(R_p::Real, P::Real)
     return pvet
 end
 
-vetting_efficiency = vetting_efficiency_none 
+vetting_efficiency = vetting_efficiency_none
 # Resume code original to SysSim
 
 
@@ -206,7 +206,7 @@ end
 
 function calc_snr_if_transit_central(t::KeplerTarget, s::Integer, p::Integer, sim_param::SimParam)
   depth = calc_transit_depth(t,s,p)
-  duration_central = calc_transit_duration_central(t,s,p)
+  duration_central = calc_transit_duration_eff_central(t,s,p)
   kepid = StellarTable.star_table(t.sys[s].star.id, :kepid)
   osd_duration_central = get_legal_durations(period,duration_central)	#tests if durations are included in Kepler's observations for a certain planet period. If not, returns nearest possible duration
   osd_central = WindowFunction.interp_OSD_from_table(kepid, period, osd_duration_central)
@@ -219,7 +219,7 @@ end
 
 function calc_snr_if_transit_central_cdpp(t::KeplerTarget, s::Integer, p::Integer, sim_param::SimParam)
   depth = calc_transit_depth(t,s,p)
-  duration_central = calc_transit_duration_central(t,s,p)
+  duration_central = calc_transit_duration_eff_central(t,s,p)
   cdpp = interpolate_cdpp_to_duration(t, duration_central)
   num_transit = calc_expected_num_transits(t,s,p,sim_param)
   calc_snr_if_transit_cdpp(t,depth,duration_central,cdpp, sim_param,num_transit=num_transit)
@@ -244,7 +244,7 @@ end
 function calc_prob_detect_if_transit_central(t::KeplerTarget, s::Integer, p::Integer, sim_param::SimParam)
   period = t.sys[s].orbit[p].P
   depth = calc_transit_depth(t,s,p)
-  duration_central = calc_transit_duration_central(t,s,p)
+  duration_central = calc_transit_duration_eff_central(t,s,p)
   kepid = StellarTable.star_table(t.sys[s].star.id, :kepid)
   osd_duration_central = get_legal_durations(period,duration_central)	#tests if durations are included in Kepler's observations for a certain planet period. If not, returns nearest possible duration
   osd_central = WindowFunction.interp_OSD_from_table(kepid, period, osd_duration_central)
@@ -258,7 +258,7 @@ end
 function calc_prob_detect_if_transit_central_cdpp(t::KeplerTarget, s::Integer, p::Integer, sim_param::SimParam)
   period = t.sys[s].orbit[p].P
   depth = calc_transit_depth(t,s,p)
-  duration_central = calc_transit_duration_central(t,s,p)
+  duration_central = calc_transit_duration_eff_central(t,s,p)
   cdpp = interpolate_cdpp_to_duration(t, duration_central)
   ntr = calc_expected_num_transits(t,s,p,sim_param)
   calc_prob_detect_if_transit_cdpp(t,depth,period,duration_central,cdpp, sim_param, num_transit=ntr)
@@ -268,7 +268,7 @@ function calc_prob_detect_if_transit_with_actual_b(t::KeplerTarget, s::Integer, 
   period = t.sys[s].orbit[p].P
   size_ratio = t.sys[s].planet[p].radius/t.sys[s].star.radius
   depth = calc_transit_depth(t,s,p)
-  duration = calc_transit_duration(t,s,p)
+  duration = calc_transit_duration_eff(t,s,p)
   b = calc_impact_parameter(t.sys[s],p)
   snr_correction = calc_depth_correction_for_grazing_transit(b,size_ratio)
   depth *= snr_correction
@@ -286,7 +286,7 @@ function calc_prob_detect_if_transit_with_actual_b_cdpp(t::KeplerTarget, s::Inte
   period = t.sys[s].orbit[p].P
   size_ratio = t.sys[s].planet[p].radius/t.sys[s].star.radius
   depth = calc_transit_depth(t,s,p)
-  duration = calc_transit_duration(t,s,p)
+  duration = calc_transit_duration_eff(t,s,p)
   b = calc_impact_parameter(t.sys[s],p)
   snr_correction = calc_depth_correction_for_grazing_transit(b,size_ratio)
   depth *= snr_correction
@@ -326,7 +326,7 @@ function calc_ave_prob_detect_if_transit_from_snr(t::KeplerTarget, snr_central::
 
   function integrand(b::Float64)::Float64
      depth_factor = calc_depth_correction_for_grazing_transit(b,size_ratio)
-     duration_factor = calc_transit_duration_factor_for_impact_parameter_b(b,size_ratio)
+     duration_factor = calc_transit_duration_eff_factor_for_impact_parameter_b(b,size_ratio)
      kepid = StellarTable.star_table(t.sys[1].star.id, :kepid)
      osd_duration = get_legal_durations(period,duration_central*duration_factor)	#tests if durations are included in Kepler's observations for a certain planet period. If not, returns nearest possible duration
      osd = WindowFunction.interp_OSD_from_table(kepid, period, osd_duration)
@@ -373,7 +373,7 @@ function calc_ave_prob_detect_if_transit_from_snr_cdpp(t::KeplerTarget, snr_cent
 
   function integrand(b::Float64)::Float64
      depth_factor = calc_depth_correction_for_grazing_transit(b,size_ratio)
-     duration_factor = calc_transit_duration_factor_for_impact_parameter_b(b,size_ratio)
+     duration_factor = calc_transit_duration_eff_factor_for_impact_parameter_b(b,size_ratio)
      cdpp = interpolate_cdpp_to_duration(t,duration_central*duration_factor)
      snr_factor = depth_factor*sqrt(duration_factor)*(cdpp_central/cdpp)
      detection_efficiency_model(snr_central*snr_factor, num_transit, min_pdet_nonzero=min_pdet_nonzero)
@@ -395,7 +395,7 @@ function calc_ave_prob_detect_if_transit_cdpp(t::KeplerTarget, s::Integer, p::In
   size_ratio = t.sys[s].planet[p].radius/t.sys[s].star.radius
   depth = calc_transit_depth(t,s,p)
   period = t.sys[s].orbit[p].P
-  duration_central = calc_transit_duration_central(t,s,p)
+  duration_central = calc_transit_duration_eff_central(t,s,p)
   ntr = calc_expected_num_transits(t,s,p,sim_param)
   calc_ave_prob_detect_if_transit_cdpp(t,depth,period,duration_central, size_ratio, sim_param, num_transit=ntr)
 end
