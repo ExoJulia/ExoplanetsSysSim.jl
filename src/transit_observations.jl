@@ -277,7 +277,7 @@ function calc_transit_duration_eff_small_angle_approx(ps::PlanetarySystemAbstrac
   if b>one(b)+size_ratio
      return zero(b)
   end
-  duration_central_circ = calc_transit_duration_eff_central_circ(ps,pl)
+  duration_central_circ = calc_transit_duration_central_circ(ps,pl)
   duration_ratio_for_impact_parameter = calc_transit_duration_eff_factor_for_impact_parameter_b(b,size_ratio)
 
   one_plus_e_sin_w = 1+ecc*sin(ps.orbit[pl].omega)
@@ -300,7 +300,7 @@ function calc_transit_duration_eff_winn2010(ps::PlanetarySystemAbstract, pl::Int
   if b>one(b)+size_ratio
      return zero(b)
   end
-  duration_central_circ = calc_transit_duration_eff_central_circ(ps,pl)
+  duration_central_circ = calc_transit_duration_ecentral_circ(ps,pl)
   arcsin_circ_central = pi/ps.orbit[pl].P*duration_central_circ
 
   one_plus_e_sin_w = 1+ecc*sin(ps.orbit[pl].omega)
@@ -328,7 +328,7 @@ function calc_transit_duration_eff_kipping2010(ps::PlanetarySystemAbstract, pl::
   if b>one(b)+size_ratio
      return zero(b)
   end
-  duration_central_circ = calc_transit_duration_eff_central_circ(ps,pl)
+  duration_central_circ = calc_transit_duration_central_circ(ps,pl)
   arcsin_circ_central = pi/ps.orbit[pl].P*duration_central_circ
 
   one_plus_e_sin_w = 1+ecc*sin(ps.orbit[pl].omega)
@@ -427,7 +427,7 @@ function calc_target_obs_sky_ave(t::KeplerTarget, sim_param::SimParam)
            pdet_this_b = 0.0
            for j in 1:max_num_b_tries
               b = rand()
-              transit_duration_factor = calc_effective_transit_duration_eff_factor_for_impact_parameter_b(b,size_ratio)
+              transit_duration_factor = calc_effective_transit_duration_factor_for_impact_parameter_b(b,size_ratio)
 
 	          duration = duration_central * transit_duration_factor   # WARNING:  Technically, this duration may be slightly reduced for grazing cases to account for reduction in SNR due to planet not being completely inscribed by star at mid-transit.  But this will be a smaller effect than limb-darkening for grazing transits.  Also, makes a variant of the small angle approximation
 
