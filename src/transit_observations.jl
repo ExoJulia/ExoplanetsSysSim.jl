@@ -613,7 +613,7 @@ function transit_noise_model_diagonal(t::KeplerTarget, s::Integer, p::Integer, d
 	tau0 *= sqrt(one_minus_e2)/(1+t.sys[s].orbit[p].ecc*sin(t.sys[s].orbit[p].omega))
 	r = t.sys[s].planet[p].radius/t.sys[s].star.radius
 	sqrt_one_minus_b2 = (0.0<=b<1.0) ? sqrt((1-b)*(1+b)) : 0.0
-	@assert(sqrt_one_minus_b2>0.0)
+	@assert(sqrt_one_minus_b2>=0.0)
 
  	T = 2*tau0*sqrt_one_minus_b2
 	tau = 2*tau0*r/sqrt_one_minus_b2
