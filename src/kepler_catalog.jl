@@ -211,11 +211,11 @@ function setup_actual_planet_candidate_catalog(df_star::DataFrame, df_koi::DataF
 	        cand_sub = findall(x->x == "CANDIDATE",df_koi[subset_entry,:koi_pdisposition])
 	        subset_entry = subset_entry[cand_sub]
 	        if length(subset_entry) > 1
-                    println("Multiple planets found in final cut: ", subset_df[n,1])
+                    println("# Multiple planets found in final cut: ", subset_df[n,1])
                 end
             end
             if length(subset_entry) < 1
-                println("No planets found in final cut: ", subset_df[n,:])
+                println("# No planets found in final cut: ", subset_df[n,:])
             end
             koi_subset[subset_entry] = true
         end
@@ -224,13 +224,14 @@ function setup_actual_planet_candidate_catalog(df_star::DataFrame, df_koi::DataF
     end
 
     output = KeplerObsCatalog()
+    sort!(df_star, (:kepid))
     df_obs = join(df_star, df_koi, on = :kepid)
     #df_obs = sort!(df_obs, cols=(:kepid))
     df_obs = sort!(df_obs, (:kepid))
 
     if haskey(sim_param, "koi_subset_csv")
         tot_plan -= length(df_obs[:kepoi_name])
-        println("Number of planet candidates in subset file with no matching star in table: ", tot_plan)
+        println("# Number of planet candidates in subset file with no matching star in table: ", tot_plan)
     end
 
     plid = 0
@@ -242,7 +243,14 @@ function setup_actual_planet_candidate_catalog(df_star::DataFrame, df_koi::DataF
             end
             num_pl = plid
             target_obs = KeplerTargetObs(num_pl)
-	    target_obs.star = ExoplanetsSysSim.StarObs(df_obs[i,:radius],df_obs[i,:mass],findfirst(df_star[:kepid], df_obs[i,:kepid]))
+	        #target_obs.star = ExoplanetsSysSim.StarObs(df_obs[i,:radius],df_obs[i,:mass],findfirst(df_star[:kepid], df_obs[i,:kepid]))
+            star_idx = searchsortedfirst(df_star[:kepid],df_obs[i,:kepid])
+            if star_idx > length(df_star[:kepid])
+                @warn "# Couldn't find kepid " * df_star[i,:kepid] * " in df_obs."
+                star_idx = rand(1:length(df_star[:kepid]))
+            end
+            target_obs.star = ExoplanetsSysSim.StarObs(df_obs[i,:radius],df_obs[i,:mass],star_idx)
+
         end
 
         target_obs.obs[plid] = ExoplanetsSysSim.TransitPlanetObs(df_obs[i,:koi_period],df_obs[i,:koi_time0bk],df_obs[i,:koi_depth]/1.0e6,df_obs[i,:koi_duration])

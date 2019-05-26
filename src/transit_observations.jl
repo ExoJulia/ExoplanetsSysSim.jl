@@ -3,7 +3,11 @@
 
 #using Distributions
 #include("constants.jl")
-include("newPDST.jl")		#includes a function to calculate if given durations match those observed by Kepler for a given period
+#include("newPDST.jl")		#includes a function to calculate if given durations match those observed by Kepler for a given period
+
+# Needed if using full noise model
+using LinearAlgebra
+using PDMats
 
 #  Starting Section of Observables that are actually used
 struct TransitPlanetObs
@@ -356,6 +360,37 @@ function calc_expected_num_transits(t::KeplerTarget, s::Integer, p::Integer, sim
  return exp_num_transits
 end
 
+#function get_legal_durations(period::Float64,duration::Float64)
+function get_durations_searched_Kepler(period::Float64,duration::Float64)
+  num_dur = length(cdpp_durations) # 14
+  min_duration = 0.0
+  max_duration = 0.0
+  min_periods = [0.5, 0.52, 0.6517, 0.7824, 0.912, 1.178, 1.3056, 1.567, 1.952, 2.343, 2.75, 3.14, 3.257, 3.91]
+  max_periods = [50.045, 118.626, 231.69, 400.359, 635.76, 725, 725, 725, 725, 725, 725, 725, 725, 725]
+  i = 1
+  #determine what maximum and minimum durations were searched for this period
+  while min_duration == 0.0 || max_duration == 0.0
+    if i > 14
+      println("No durations match this period")
+      return(0.0,0.0)
+    end
+    if period <= max_periods[i] && min_duration == 0.0
+      min_duration = cdpp_durations[i]
+    end
+    if period >= min_periods[num_dur+1-i] && max_duration == 0.0
+      max_duration = cdpp_durations[num_dur+1-i]
+    end
+    i+=1
+  end
+  if duration<=max_duration/24 && duration>=min_duration/24
+    return duration
+  elseif duration>=max_duration/24
+    return max_duration/24
+  elseif duration <=min_duration/24
+    return min_duration/24
+  end
+end
+
 include("transit_detection_model.jl")
 include("transit_prob_geometric.jl")
 
@@ -408,7 +443,7 @@ function calc_target_obs_sky_ave(t::KeplerTarget, sim_param::SimParam)
         # pdet_ave = calc_ave_prob_detect_if_transit_from_snr_cdpp(t, snr_central, period, duration_central, size_ratio, cdpp_central, sim_param, num_transit=ntr)
 
         kepid = StellarTable.star_table(t.sys[s].star.id, :kepid)
-        osd_duration_central = get_legal_durations(period,duration_central)	#tests if durations are included in Kepler's observations for a certain planet period. If not, returns nearest possible duration
+        osd_duration_central = get_durations_searched_Kepler(period,duration_central)	#tests if durations are included in Kepler's observations for a certain planet period. If not, returns nearest possible duration
         osd_central = WindowFunction.interp_OSD_from_table(kepid, period, osd_duration_central)
         if osd_duration_central > duration_central				#use a correcting factor if this duration is lower than the minimum searched for this period.
 	   osd_central = osd_central*osd_duration_central/duration_central
@@ -434,7 +469,7 @@ function calc_target_obs_sky_ave(t::KeplerTarget, sim_param::SimParam)
               # cdpp = interpolate_cdpp_to_duration(t, duration)
               # snr = snr_central * (cdpp_central/cdpp) * sqrt(transit_duration_factor)
 
-              osd_duration = get_legal_durations(period,duration)	#tests if durations are included in Kepler's observations for a certain planet period. If not, returns nearest possible duration
+              osd_duration = get_durations_searched_Kepler(period,duration)	#tests if durations are included in Kepler's observations for a certain planet period. If not, returns nearest possible duration
               osd = WindowFunction.interp_OSD_from_table(kepid, period, osd_duration)
               if osd_duration > duration				#use a correcting factor if this duration is lower than the minimum searched for this period.
 	          osd = osd*osd_duration/duration
@@ -515,7 +550,7 @@ function calc_target_obs_single_obs(t::KeplerTarget, sim_param::SimParam)
         # snr = calc_snr_if_transit_cdpp(t, depth, duration, cdpp, sim_param, num_transit=ntr)
 
         kepid = StellarTable.star_table(t.sys[s].star.id, :kepid)
-        osd_duration = get_legal_durations(period,duration)	#tests if durations are included in Kepler's observations for a certain planet period. If not, returns nearest possible duration
+        osd_duration = get_durations_searched_Kepler(period,duration)	#tests if durations are included in Kepler's observations for a certain planet period. If not, returns nearest possible duration
         osd = WindowFunction.interp_OSD_from_table(kepid, period, osd_duration)
         if osd_duration > duration				#use a correcting factor if this duration is lower than the minimum searched for this period.
 	   osd = osd*osd_duration/duration
@@ -601,7 +636,24 @@ function transit_noise_model_fixed_noise(t::KeplerTarget, s::Integer, p::Integer
   return obs, sigma
 end
 
+function make_matrix_pos_def(A::Union{AbstractArray{T1,2},Symmetric{AbstractArray{T1,2}}}) where {T1<:Real}
+    @assert size(A,1) == size(A,2)
+    A = (typeof(A) <: Symmetric) ? A : Symmetric(A)
+    smallest_eigval = eigvals(A,1:1)[1]
+    if smallest_eigval > 0.0
+        return PDMat(A)
+    else
+        ridge = 1.01 * abs(smallest_eigval)
+        return PDMat(A + Diagonal(ridge*ones(size(A,1))))
+    end
+end
+
 function transit_noise_model_diagonal(t::KeplerTarget, s::Integer, p::Integer, depth::Float64, duration::Float64, snr::Float64, num_tr::Float64; b::Float64 = calc_impact_parameter(t.sys[s],p) )
+    transit_noise_model_price_rogers(t, s, p, depth, duration, snr, num_tr; b=b, diagonal=true )
+end
+
+
+function transit_noise_model_price_rogers(t::KeplerTarget, s::Integer, p::Integer, depth::Float64, duration::Float64, snr::Float64, num_tr::Float64; b::Float64 = calc_impact_parameter(t.sys[s],p), diagonal::Bool = false )
   period = t.sys[s].orbit[p].P
   t0 = period*rand()    # WARNING: Not being calculated from orbit
 
@@ -613,18 +665,23 @@ function transit_noise_model_diagonal(t::KeplerTarget, s::Integer, p::Integer, d
 	tau0 *= sqrt(one_minus_e2)/(1+t.sys[s].orbit[p].ecc*sin(t.sys[s].orbit[p].omega))
 	r = t.sys[s].planet[p].radius/t.sys[s].star.radius
 	sqrt_one_minus_b2 = (0.0<=b<1.0) ? sqrt((1-b)*(1+b)) : 0.0
-	@assert(sqrt_one_minus_b2>0.0)
+	@assert(sqrt_one_minus_b2>=0.0)
+    if(b<1)   # trapezoidal transit shape
+ 	   T = 2*tau0*sqrt_one_minus_b2
+	   tau = 2*tau0*r/sqrt_one_minus_b2
+	   delta = depth
+    else      # triangular transit shape, TODO: SCIENCE: Could improve treatment, but so rare this should be good enough for most purposes not involving EBs
+           T = 2*tau0*sqrt((1+r+b)*((1-b)+r))  # Note: reordered second term from (1+r)-b to help floating point precission
+           tau = T/2
+	   delta = depth/2
+    end
 
- 	T = 2*tau0*sqrt_one_minus_b2
-	tau = 2*tau0*r/sqrt_one_minus_b2
 	Ttot = period
 	I = LC_integration_time      # WARNING: Assumes LC only
 	Lambda_eff = LC_rate * num_tr # calc_expected_num_transits(t, s, p, sim_param)
-	delta = depth
-	#sigma = t.cdpp[1,1]
 	sigma = interpolate_cdpp_to_duration(t, duration)
 
-	# Price & Rogers Eqn A8 & Table 1 # WARNING: Someone should check Eqns
+	# Price & Rogers Eqn A8 & Table 1 # Thanks to Danley for finding typeos.
 	tau3 = tau^3
 	I3 = I^3
 	a1 = (10*tau3+2*I^3-5*tau*I^2)/tau3
@@ -666,49 +723,50 @@ function transit_noise_model_diagonal(t::KeplerTarget, s::Integer, p::Integer, d
         sigma_obs = TransitPlanetObs( sigma_period, sigma_t0, sigma_depth, sigma_duration )
 
         local obs
-        if true     # Assume uncertainties uncorrelated (Diagonal)
-  	    obs = TransitPlanetObs( period*(1.0+sigma_obs.period*randtn()), t0*(1.0+sigma_obs.period*randtn()), depth*(1.0+sigma_obs.depth*randtn()),duration*(1.0+sigma_obs.duration*randtn()))
-        else        # TODO SCI DETAIL:  Account for correlated uncertaintties in transit parameters
+        if diagonal     # Assume uncertainties uncorrelated (Diagonal)
+  	         obs = TransitPlanetObs( period*(1.0+sigma_obs.period*randtn()), t0*(1.0+sigma_obs.period*randtn()), depth*(1.0+sigma_obs.depth*randtn()),duration*(1.0+sigma_obs.duration*randtn()))
+        else        # TODO SCI DETAIL:  Account for correlated uncertaintties in transit parameters.  Need to check/enforce that cov is robustly postitive-definite before turning on
             cov = zeros(4,4)
-        if tau>=I
-	# cov[0,0] = -3*tau/(delta*delta*a15)
-	cov[1,1] = 24*tau*a10/(delta*delta*a5)
-	cov[1,2] = cov[2,1] = 36*a8*tau*a1/(delta*delta*a5)
-	cov[1,3] = cov[3,1] = -12*a11*a1/(delta*a5)
-	cov[1,4] = cov[4,1] = -12*a6*a1/(delta*a5)
-	cov[2,2] = 6*tau*a14/(delta*delta*a5)
-	cov[2,3] = cov[3,2] = 72*a8*a2/(delta*a5)
-	cov[2,4] = cov[4,2] = 6*a7/(delta*a5)
-	cov[3,3] = -24*a11*a2/(tau*a5)
-	cov[3,4] = cov[4,3] = -24*a6*a2/(tau*a5)
-	cov[4,4] = a12/(tau*a5)
-        else
-	# cov[0,0] = 3*I/(delta*delta*b14)
-	cov[1,1] = -24*I*I*b12/(delta*delta*tau*b7)
-	cov[1,2] = cov[2,1] = 36*I*b13*b5/(delta*delta*b7)
-	cov[1,3] = cov[3,1] = 12*b5*b1/(delta*b7)
-	cov[1,4] = cov[4,1] = 12*b5*b2/(delta*b7)
-	cov[2,2] = 6*I*b9/(delta*delta*b7)
-	cov[2,3] = cov[3,2] = 72*b13/(delta*b7)
-	cov[2,4] = cov[4,2] = 6*b3/(delta*b7)
-	cov[3,3] = 24*b1/(I*b7)
-	cov[3,4] = cov[4,3] = 24*b2/(I*b7)
-	cov[4,4] = b10/(I*b7)
-	end
-	cov .*= sigma*sigma/Lambda_eff
-	obs_dist = MvNormal(zeros(4),cov)
+            if tau>=I
+	           # cov[0,0] = -3*tau/(delta*delta*a15)
+               cov[1,1] = 24*tau*a10/(delta*delta*a5)
+               cov[1,2] = cov[2,1] = 36*a8*tau*a1/(delta*delta*a5)
+	           cov[1,3] = cov[3,1] = -12*a11*a1/(delta*a5)
+	           cov[1,4] = cov[4,1] = -12*a6*a1/(delta*a5)
+	           cov[2,2] = 6*tau*a14/(delta*delta*a5)
+	           cov[2,3] = cov[3,2] = 72*a8*a2/(delta*a5)
+	           cov[2,4] = cov[4,2] = 6*a7/(delta*a5)
+	           cov[3,3] = -24*a11*a2/(tau*a5)
+	           cov[3,4] = cov[4,3] = -24*a6*a2/(tau*a5)
+	           cov[4,4] = a12/(tau*a5)
+           else
+	           # cov[0,0] = 3*I/(delta*delta*b14)
+	           cov[1,1] = -24*I*I*b12/(delta*delta*tau*b7)
+	           cov[1,2] = cov[2,1] = 36*I*b13*b5/(delta*delta*b7)
+	           cov[1,3] = cov[3,1] = 12*b5*b1/(delta*b7)
+	           cov[1,4] = cov[4,1] = 12*b5*b2/(delta*b7)
+	           cov[2,2] = 6*I*b9/(delta*delta*b7)
+	           cov[2,3] = cov[3,2] = 72*b13/(delta*b7)
+	           cov[2,4] = cov[4,2] = 6*b3/(delta*b7)
+	           cov[3,3] = 24*b1/(I*b7)
+	           cov[3,4] = cov[4,3] = 24*b2/(I*b7)
+	           cov[4,4] = b10/(I*b7)
+	       end
+	       cov .*= sigma*sigma/Lambda_eff
+	       cov = make_matrix_pos_def(cov)
+           obs_dist = MvNormal(zeros(4),cov)
 
-	local obs_duration, obs_depth, sigma_duration, sigma_depth
-        isvalid = false
-	while !isvalid
-	  obs_vec = rand(obs_dist)
-          obs_duration = duration + obs_vec[2]
-          obs_depth = depth + obs_vec[3]
-          if (obs_duration>0.0) && (obs_depth>0.0)
-             isvalid = true
-	  end
-	end
-     	    obs = TransitPlanetObs( period*(1.0+sigma_obs.period*randtn()), t0*(1.0+sigma_obs.period*randtn()), obs_depth,obs_duration)
+	       local obs_period, obs_duration, obs_depth, sigma_period, sigma_duration, sigma_depth
+           isvalid = false
+	       while !isvalid
+	          obs_vec = rand(obs_dist)
+              obs_duration = duration + obs_vec[2]
+              obs_depth = depth + obs_vec[3]
+              if (obs_duration>0.0) && (obs_depth>0.0)
+                  isvalid = true
+	          end
+           end # while
+     	   obs = TransitPlanetObs( period*(1.0+sigma_obs.period*randn()), t0*(1.0+sigma_obs.t0*randn()), obs_depth, obs_duration)
         end
   	return obs, sigma_obs
 end

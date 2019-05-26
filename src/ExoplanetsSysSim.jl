@@ -14,6 +14,7 @@ if VERSION >= v"0.5-"
   using Combinatorics
 end
 using Distributions
+using PDMats
 # using StatsFuns
 using DataFrames
 if VERSION < VersionNumber(0,3,20)

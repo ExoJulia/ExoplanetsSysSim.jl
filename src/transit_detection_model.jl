@@ -176,7 +176,7 @@ vetting_efficiency = vetting_efficiency_none
 # Resume code original to SysSim
 
 
-function interpolate_cdpp_to_duration(t::KeplerTarget, duration::Float64)::Float64
+function interpolate_cdpp_to_duration_use_target_cdpp(t::KeplerTarget, duration::Float64)::Float64
    duration_in_hours = duration *24.0
    dur_idx = searchsortedlast(cdpp_durations,duration_in_hours)   # cdpp_durations is defined in constants.jl
    if dur_idx <= 0
@@ -189,6 +189,25 @@ function interpolate_cdpp_to_duration(t::KeplerTarget, duration::Float64)::Float
    end
    return cdpp
 end
+
+function interpolate_cdpp_to_duration_lookup_cdpp(t::KeplerTarget, duration::Float64)::Float64
+   duration_in_hours = duration *24.0
+   dur_idx = searchsortedlast(cdpp_durations,duration_in_hours)   # cdpp_durations is defined in constants.jl
+   get_cdpp(i::Integer) = 1.0e-6*sqrt(cdpp_durations[i]/24.0/LC_duration)*star_table(t,duration_symbols[i])
+
+   if dur_idx <= 0
+      cdpp = get_cdpp(1)
+   elseif dur_idx==length(cdpp_durations) && (duration_in_hours >= cdpp_durations[end]) # Should be 15 cdpp_durations.
+      cdpp = get_cdpp(length(cdpp_durations))
+   else
+      w = ((duration_in_hours)-cdpp_durations[dur_idx]) / (cdpp_durations[dur_idx+1]-cdpp_durations[dur_idx])
+      cdpp = w*get_cdpp(dur_idx+1) + (1-w)*get_cdpp(dur_idx)
+   end
+   return cdpp
+end
+
+#interpolate_cdpp_to_duration = interpolate_cdpp_to_duration_use_target_cdpp
+interpolate_cdpp_to_duration = interpolate_cdpp_to_duration_lookup_cdpp
 
 #this function calculates snr using cdpp instead of osd
 function calc_snr_if_transit_cdpp(t::KeplerTarget, depth::Float64, duration::Float64, cdpp::Float64, sim_param::SimParam; num_transit::Float64 = 1)
@@ -208,7 +227,7 @@ function calc_snr_if_transit_central(t::KeplerTarget, s::Integer, p::Integer, si
   depth = calc_transit_depth(t,s,p)
   duration_central = calc_transit_duration_eff_central(t,s,p)
   kepid = StellarTable.star_table(t.sys[s].star.id, :kepid)
-  osd_duration_central = get_legal_durations(period,duration_central)	#tests if durations are included in Kepler's observations for a certain planet period. If not, returns nearest possible duration
+  osd_duration_central = get_durations_searched_Kepler(period,duration_central)	#tests if durations are included in Kepler's observations for a certain planet period. If not, returns nearest possible duration
   osd_central = WindowFunction.interp_OSD_from_table(kepid, period, osd_duration_central)
   if osd_duration_central > duration_central				#use a correcting factor if this duration is lower than the minimum searched for this period.
       osd_central = osd_central*osd_duration_central/duration_central
@@ -246,7 +265,7 @@ function calc_prob_detect_if_transit_central(t::KeplerTarget, s::Integer, p::Int
   depth = calc_transit_depth(t,s,p)
   duration_central = calc_transit_duration_eff_central(t,s,p)
   kepid = StellarTable.star_table(t.sys[s].star.id, :kepid)
-  osd_duration_central = get_legal_durations(period,duration_central)	#tests if durations are included in Kepler's observations for a certain planet period. If not, returns nearest possible duration
+  osd_duration_central = get_durations_searched_Kepler(period,duration_central)	#tests if durations are included in Kepler's observations for a certain planet period. If not, returns nearest possible duration
   osd_central = WindowFunction.interp_OSD_from_table(kepid, period, osd_duration_central)
   if osd_duration_central > duration_central				#use a correcting factor if this duration is lower than the minimum searched for this period.
       osd_central = osd_central*osd_duration_central/duration_central
@@ -273,7 +292,7 @@ function calc_prob_detect_if_transit_with_actual_b(t::KeplerTarget, s::Integer, 
   snr_correction = calc_depth_correction_for_grazing_transit(b,size_ratio)
   depth *= snr_correction
   kepid = StellarTable.star_table(t.sys[s].star.id, :kepid)
-  osd_duration = get_legal_durations(period,duration)	#tests if durations are included in Kepler's observations for a certain planet period. If not, returns nearest possible duration
+  osd_duration = get_durations_searched_Kepler(period,duration)	#tests if durations are included in Kepler's observations for a certain planet period. If not, returns nearest possible duration
   osd = WindowFunction.interp_OSD_from_table(kepid, period, osd_duration)
   if osd_duration > duration				#use a correcting factor if this duration is lower than the minimum searched for this period.
       osd = osd*osd_duration/duration
@@ -328,7 +347,7 @@ function calc_ave_prob_detect_if_transit_from_snr(t::KeplerTarget, snr_central::
      depth_factor = calc_depth_correction_for_grazing_transit(b,size_ratio)
      duration_factor = calc_transit_duration_eff_factor_for_impact_parameter_b(b,size_ratio)
      kepid = StellarTable.star_table(t.sys[1].star.id, :kepid)
-     osd_duration = get_legal_durations(period,duration_central*duration_factor)	#tests if durations are included in Kepler's observations for a certain planet period. If not, returns nearest possible duration
+     osd_duration = get_durations_searched_Kepler(period,duration_central*duration_factor)	#tests if durations are included in Kepler's observations for a certain planet period. If not, returns nearest possible duration
      osd = WindowFunction.interp_OSD_from_table(kepid, period, osd_duration)
      if osd_duration > duration_central*duration_factor				#use a correcting factor if this duration is lower than the minimum searched for this period.
 	osd = osd*osd_duration/(duration_central*duration_factor)
