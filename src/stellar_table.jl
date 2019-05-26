@@ -117,6 +117,7 @@ end # module StellarTable
 
 # using ExoplanetsSysSim.StellarTable
 
+#=
 function generate_star_from_table(sim_param::SimParam, id::Integer)  # WARNING:  To be renamed once there's a working/tested version that uses a stellar catalog with GAIA data
   mu_r = StellarTable.star_table(id,:radius)
   sig_r1 = StellarTable.star_table(id,:radius_err1)
@@ -131,10 +132,11 @@ function generate_star_from_table(sim_param::SimParam, id::Integer)  # WARNING: 
   while f<0.0
     f = 1.0+0.1*randn()
   end
-  # ld = LimbDarkeningParam4thOrder(StellarTable.star_table(id,:limbdark_coeff1), StellarTable.star_table(id,:limbdark_coeff2), StellarTable.star_table(id,:limbdark_coeff3), StellarTable.star_table(id,:limbdark_coeff4) ) # TODO Add limb darkening
-  # return SingleStar(r,m,f,id,ld)
-  return SingleStar(r,m,f,id)
+  ld = LimbDarkeningParam4thOrder(StellarTable.star_table(id,:limbdark_coeff1), StellarTable.star_table(id,:limbdark_coeff2), StellarTable.star_table(id,:limbdark_coeff3), StellarTable.star_table(id,:limbdark_coeff4) )
+  return SingleStar(r,m,f,id,ld)
+  #return SingleStar(r,m,f,id)
 end
+=#
 
 function generate_star_from_table(sim_param::SimParam)
   id = rand(1:StellarTable.num_usable_in_star_table())

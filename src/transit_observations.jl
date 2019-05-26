@@ -104,6 +104,7 @@ calc_transit_duration_central_kipping2010(t::KeplerTarget, s::Integer, p::Intege
 calc_transit_duration_central(ps::PlanetarySystemAbstract, pl::Integer) = calc_transit_duration_central_kipping2010(ps,pl)
 
 calc_transit_duration_central(t::KeplerTarget, s::Integer, p::Integer) = calc_transit_duration_central(t.sys[s],p)
+calc_transit_duration_eff_central(t::KeplerTarget, s::Integer, p::Integer) = calc_transit_duration_central(t.sys[s],p)
 
 function calc_transit_duration_factor_for_impact_parameter_b(b::T, p::T)  where T <:Real
     @assert(zero(b)<=b)         # b = Impact Parameter
@@ -403,7 +404,7 @@ mutable struct KeplerTargetObs                        # QUERY:  Do we want to ma
 
   prob_detect::SystemDetectionProbsAbstract  # QUERY: Specialize type of prob_detect depending on whether for simulated or real data?
 
-  has_sc::BitArray{1}                        # WARNING: Changed from Array{Bool}.  Alternatively, we could try StaticArray{Bool} so fixed size?  Do we even need to keep this?
+  has_sc::BitArray{1}                        # Note: Changed from Array{Bool}.  Alternatively, we could try StaticArray{Bool} so fixed size?  Do we even need to keep this?
 
   star::StarObs
 end
@@ -477,7 +478,7 @@ function calc_target_obs_sky_ave(t::KeplerTarget, sim_param::SimParam)
               snr = snr_central * (osd_central/osd)
 
               pdet_this_b = calc_prob_detect_if_transit(t, snr, period, duration, sim_param, num_transit=ntr)
-              pvet = vetting_efficiency(t.sys[s].planet[p].radius, period) # TODO: Ask Danely about this line
+              pvet = vetting_efficiency(t.sys[s].planet[p].radius, period)
 
               if pdet_this_b >= threshold_pdet_ratio * pdet_central
                   #println("# Adding pdet_this_b = ", pdet_this_b, " pdet_c = ", pdet_central, " snr= ",snr, " cdpp= ",cdpp, " duration= ",duration, " b=",b, " u01= ", threshold_pdet_ratio)
@@ -560,7 +561,7 @@ function calc_target_obs_single_obs(t::KeplerTarget, sim_param::SimParam)
         pdet[p] = calc_prob_detect_if_transit(t, snr, period, duration, sim_param, num_transit=ntr)
 
 	if pdet[p] > min_detect_prob_to_be_included
-           pvet = vetting_efficiency(t.sys[s].planet[p].radius, period) # TODO: Ask Danely about this line
+           pvet = vetting_efficiency(t.sys[s].planet[p].radius, period)
            pdet[p] *= pvet
            duration = calc_transit_duration(t,s,p)
             obs[i], sigma[i] = transit_noise_model(t, s, p, depth, duration, snr, ntr)
@@ -636,14 +637,20 @@ function transit_noise_model_fixed_noise(t::KeplerTarget, s::Integer, p::Integer
   return obs, sigma
 end
 
-function make_matrix_pos_def(A::Union{AbstractArray{T1,2},Symmetric{AbstractArray{T1,2}}}) where {T1<:Real}
+#make_matrix_pos_def_count = 0
+function make_matrix_pos_def(A::Union{AbstractArray{T1,2},Symmetric{AbstractArray{T1,2}}}; verbose::Bool = false) where {T1<:Real}
     @assert size(A,1) == size(A,2)
+    #global make_matrix_pos_def_count
     A = (typeof(A) <: Symmetric) ? A : Symmetric(A)
     smallest_eigval = eigvals(A,1:1)[1]
     if smallest_eigval > 0.0
         return PDMat(A)
     else
+        #make_matrix_pos_def_count += 1
         ridge = 1.01 * abs(smallest_eigval)
+        if verbose
+            println("# Warning: Adding ridge (",ridge,") to matrix w/ eigenvalue ", smallest_eigval," (#", make_matrix_pos_def_count,").")
+        end
         return PDMat(A + Diagonal(ridge*ones(size(A,1))))
     end
 end
@@ -670,9 +677,10 @@ function transit_noise_model_price_rogers(t::KeplerTarget, s::Integer, p::Intege
  	   T = 2*tau0*sqrt_one_minus_b2
 	   tau = 2*tau0*r/sqrt_one_minus_b2
 	   delta = depth
-    else      # triangular transit shape, TODO: SCIENCE: Could improve treatment, but so rare this should be good enough for most purposes not involving EBs
-           T = 2*tau0*sqrt((1+r+b)*((1-b)+r))  # Note: reordered second term from (1+r)-b to help floating point precission
-           tau = T/2
+   else      # triangular transit shape, TODO: SCI DETAIL: Could improve treatment, but so rare this should be good enough for most purposes not involving EBs
+       @assert b<=1+r
+       T = 2*tau0*sqrt((1+r+b)*(1+r-b))
+       tau = T/2
 	   delta = depth/2
     end
 
@@ -725,7 +733,7 @@ function transit_noise_model_price_rogers(t::KeplerTarget, s::Integer, p::Intege
         local obs
         if diagonal     # Assume uncertainties uncorrelated (Diagonal)
   	         obs = TransitPlanetObs( period*(1.0+sigma_obs.period*randtn()), t0*(1.0+sigma_obs.period*randtn()), depth*(1.0+sigma_obs.depth*randtn()),duration*(1.0+sigma_obs.duration*randtn()))
-        else        # TODO SCI DETAIL:  Account for correlated uncertaintties in transit parameters.  Need to check/enforce that cov is robustly postitive-definite before turning on
+        else  # TODO WARNING TEST: Should test before using full covariance matrix
             cov = zeros(4,4)
             if tau>=I
 	           # cov[0,0] = -3*tau/(delta*delta*a15)

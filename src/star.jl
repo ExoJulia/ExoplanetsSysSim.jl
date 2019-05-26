@@ -3,7 +3,7 @@
 
 #using Distributions
 
-@compat abstract type StarAbstract end               # TODO: Check does using StarAbstract cause a significant performance hit
+@compat abstract type StarAbstract end               # TODO OPT: Check does using StarAbstract cause a significant performance hit
 
 @compat abstract type SingleStarAbstract <: StarAbstract end
 
@@ -64,7 +64,7 @@ function generate_star_dumb(sim_param::SimParam)
   while f<0.0
     f = 1.0+0.1*randn()
   end
-  ld = LimbDarkeningParamQuadratic(0.4603,0.2291)   # TODO: Once we implement limb darkening
+  ld = LimbDarkeningParamQuadratic(0.4603,0.2291)
   # ld =  LimbDarkeningParam4thOrder(0.,0.,0.,0.)  # Equivalent to uniform surface brightness for testing
   return SingleStar(r,m,f,ld,0)
 end

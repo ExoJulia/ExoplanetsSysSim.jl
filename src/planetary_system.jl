@@ -76,7 +76,7 @@ function generate_planet_mass_from_radius_powerlaw(r::Float64, sim_param::SimPar
   return m
 end
 
-function generate_planet_mass_from_radius_powerlaw(r::Float64, s::Star, o::Orbit, sim_param::SimParam)  # TODO SCI: IMPORTANT once have stability criteria, replace w/ better M-R relationship
+function generate_planet_mass_from_radius_powerlaw(r::Float64, s::Star, o::Orbit, sim_param::SimParam)  # TODO USER SCI: This is importnat if you are using a stability criteria.  In that case, this should be replacde w/ better M-R relationship.  See Matthias's clustered  model for example.
   generate_planet_mass_from_radius_powerlaw(r,sim_param)
 end
 

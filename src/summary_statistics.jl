@@ -154,14 +154,8 @@ function calc_summary_stats_obs_demo(cat_obs::KeplerObsCatalog, param::SimParam 
 end
 
 
+# Just returns summary statistics passed, but provides a demo/hook for computing more expensive summary statistics if a model is good enouguh to be worth the extra time.
 function calc_summary_stats_sim_pass_two_demo(cat_obs::KeplerObsCatalog, cat_phys::KeplerPhysicalCatalog, ss::CatalogSummaryStatistics, param::SimParam )
-  max_tranets_in_sys = max_tranets_in_sys = get_int(param,"max_tranets_in_sys")                  # Demo that simulation parameters can specify how to evalute models, too
-  #num_sys_tranets = zeros(max_tranets_in_sys)
-
-  #for n in 1:max_tranets_in_sys                                            # Make histogram of N-tranet systems
-  #  num_sys_tranets[n] = length(ss.cache["idx_n_tranets"][n])              # TODO SCI: Make pay attention to transit and detection probabilities in multiple systems.  DARIN
-  #end
-  #ss.stat["num_sys_tranets"] = num_sys_tranets
   return ss
 end
 

@@ -125,11 +125,11 @@ function calc_period_idx(P::Float64)::Int64
         idx += 1
      end
   end
-  return idx   # TODO IMPORTANT: IMPLEMENT / TEST
+  return idx
 end
 
 function calc_duration_idx(D::Float64)::Int64
-  # NOTE IMPORTANT: Currently assumes we left wf data in hours, so deal with that conversion here
+  # NOTE: Currently assumes we left wf data in hours, so deal with that conversion here
   @assert(D>=zero(D)) ##### Make sure this function is still doing the right thing if D = 0!
   hours_in_day = 24
   idx = searchsortedlast(win_func_data.wf_durations_in_hrs,D*hours_in_day)
@@ -140,7 +140,7 @@ function calc_duration_idx(D::Float64)::Int64
         idx += 1
      end
   end
-  return idx   # TODO IMPORTANT: IMPLEMENT / TEST
+  return idx
 end
 
 
@@ -148,7 +148,7 @@ function eval_window_function(wf_idx::Int64=-1; Duration::Float64=0., Period::Fl
   D_idx = calc_duration_idx(Duration)
   P_idx = calc_period_idx(Period)
   wf = eval_window_function(wf_idx,D_idx,P_idx)
-  # TODO IMPORTANT: Improve way deal with missing wf values for some durations. Interpolate?
+  # TODO SCI DETAIL: Improve way deal with missing wf values for some durations. Interpolate?
   while wf<=zero(wf) && D_idx<length(win_func_data.wf_durations_in_hrs)
      D_idx += 1
      wf = eval_window_function(wf_idx,D_idx,P_idx)

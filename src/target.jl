@@ -94,7 +94,7 @@ function generate_kepler_target_from_table(sim_param::SimParam)
   ld = LimbDarkeningParam4thOrder(star_table(star_id,:limbdark_coeff1), star_table(star_id,:limbdark_coeff2), star_table(star_id,:limbdark_coeff3), star_table(star_id,:limbdark_coeff4) )
   star = SingleStar(radius,mass,1.0,ld,star_id)     # TODO SCI: Allow for blends, binaries, etc.
   #cdpp_arr = make_cdpp_array(star_id)
-  cdpp_arr = make_cdpp_array_empty(star_id) # TODO: WARNING: Now leaving this field empty out and looking up each time
+  cdpp_arr = make_cdpp_array_empty(star_id) # Note: Now leaving this field empty out and looking up each time via interpolate_cdpp_to_duration_lookup_cdpp instead of interpolate_cdpp_to_duration_use_target_cdpp
   contam = star_table(star_id, :contam)
   data_span = star_table(star_id, :dataspan)
   duty_cycle = star_table(star_id, :dutycycle)
