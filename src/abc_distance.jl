@@ -116,7 +116,7 @@ function distance_sum_of_bernoulli_draws(num_pl_obs::Integer, num_targets_obs::I
 end
 
 # compute Canberra distance.
-function distance_canberra(x::AbstractVector{T}, y::AbstractVector{S}) where {T<:Real, S<:Real}
+function distance_canberra_modified(x::AbstractVector{T}, y::AbstractVector{S}) where {T<:Real, S<:Real}
     @assert length(x) == length(y)
     dist_sum = 0.0
     for i in 1:length(x)
@@ -131,6 +131,24 @@ function distance_canberra(x::AbstractVector{T}, y::AbstractVector{S}) where {T<
     return dist_sum
 end
 
+# compute originalCanberra distance.
+function distance_canberra_orig(x::AbstractVector{T}, y::AbstractVector{S}) where {T<:Real, S<:Real}
+    @assert length(x) == length(y)
+    dist_sum = 0.0
+    for i in 1:length(x)
+        numer = abs(x[i]-y[i])
+        denom = abs(x[i]) + abs(y[i])
+        if denom == 0.0
+            continue
+        else
+            dist_sum += numer/denom
+        end
+    end
+    return dist_sum
+end
+
+distance_canberra(x::AbstractVector{T}, y::AbstractVector{S}) where {T<:Real, S<:Real} = distance_canberra_modified(x,y)  # WARNING: Defaults to modified Canberra distance.  At some point, update Danley's code to call distance_canberra_modified, so can remove this
+
 # compute Cosine distance.
 function distance_cosine(x::AbstractVector{T}, y::AbstractVector{S}) where {T<:Real, S<:Real}
     @assert length(x) == length(y)
@@ -144,6 +162,25 @@ function distance_cosine(x::AbstractVector{T}, y::AbstractVector{S}) where {T<:R
     end
     return numer/(sqrt(denom_1)*sqrt(denom_2))
 end
+
+function wasserstein_distance(u_values::AbstractVector{T1}, v_values::AbstractVector{T2}, p::Integer) where { T1<:Real, T2<:Real}
+  # code adapted from SciPy.stats._cdf_distance
+  u_sorter = issorted(u_values) ? (1:length(u_values)) : sortperm(u_values)
+  v_sorter = issorted(v_values) ? (1:length(v_values)) : sortperm(v_values)
+  all_values = sort(vcat(u_values,v_values),alg=MergeSort)
+  deltas = all_values[2:end] .- all_values[1:end-1]
+  u_cdf = map(x->searchsortedlast(u_values[u_sorter],x)/ length(u_values),all_values[1:end-1])  
+  v_cdf = map(x->searchsortedlast(v_values[v_sorter],x)/ length(v_values),all_values[1:end-1])
+  if p==1
+     return sum(abs.(u_cdf.-v_cdf).*deltas)
+    elseif p==2
+      return sqrt(sum((u_cdf.-v_cdf).^2 .* deltas))
+    else
+      return pow(sum(abs.(u_cdf.-v_cdf).^p .* deltas),1/p)
+    end
+end
+
+earth_mover_distance(u_values::AbstractVector{T1}, v_values::AbstractVector{T2}) where { T1<:Real, T2<:Real} = wasserstein_distance(u_values,v_values,1)
 
 # TODO USER SCI: IMPORTANT:  Replace the distance function with something well thought out for your particular scientific application.  See examples
 function calc_distance_vector_demo(summary1::CatalogSummaryStatistics, summary2::CatalogSummaryStatistics, pass::Int64, sim_param::SimParam ; verbose::Bool = false)
