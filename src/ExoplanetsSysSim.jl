@@ -45,6 +45,8 @@ export flux, mass
 export generate_stars
 export PlanetarySystemAbstract, PlanetarySystemSingleStar, PlanetarySystem
 include("planetary_system.jl")
+export test_stability, is_period_ratio_near_resonance, calc_if_near_resonance
+export draw_truncated_poisson, draw_power_law, map_square_to_triangle
 #include("corbits.jl")
 #export prob_of_transits_approx
 include("window_function.jl")

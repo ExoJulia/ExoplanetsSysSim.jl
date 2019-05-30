@@ -1,7 +1,7 @@
 name = "ExoplanetsSysSim"
 uuid = "e0ba718c-02ec-11e9-384b-dd2930072415"
 authors = ["Eric Ford <eford@psu.edu>"]
-version = "0.9.3"
+version = "1.0.0"
 
 [deps]
 CORBITS = "2ef0fd6c-02ed-11e9-22ee-f18eda6e5e26"
