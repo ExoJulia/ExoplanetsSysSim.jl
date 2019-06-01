@@ -14,7 +14,7 @@ export make_vector_of_active_param_keys, make_vector_of_sim_param, get_range_for
 export setup_sim_param_demo, test_sim_param_constructors
 #export preallocate_memory!
 
-const global version_id_str = "0.3.1"
+const global version_id_str = "1.0.0"
 const global version_id_pair = ("version",version_id_str)
 const global julia_version_pair = ("version_julia",string(VERSION))
 

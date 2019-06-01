@@ -65,6 +65,90 @@ function num_planets(s::PlanetarySystem{StarT}) where {StarT<:StarAbstract}
   return length(planets(s))
 end
 
+
+function calc_hill_sphere(a::Float64, mu::Float64)
+    return a*(mu/3)^(1//3)
+end
+
+function calc_mutual_hill_radii(ps::PlanetarySystem{StarT}, pl1::Int64, pl2::Int64) where StarT <: StarAbstract
+    mu = (ps.planet[pl1].mass + ps.planet[pl2].mass)/ps.star.mass
+    a = 0.5*(ps.orbit[pl1].a + ps.orbit[pl2].a)
+    return calc_hill_sphere(a, mu)
+end
+
+function test_stability_circular(P::AbstractVector{Float64}, mass::AbstractVector{Float64}, star_mass::Float64, sim_param::SimParam)
+    @assert length(P) == length(mass)
+    min_num_mutual_hill_radii = get_real(sim_param, "num_mutual_hill_radii")
+    found_instability = false
+    order = sortperm(P)
+    a2 = semimajor_axis(P[order[1]], star_mass)
+    for pl in 1:(length(P)-1)
+        a1 = a2   # semimajor_axis(P[order[pl]],star_mass)
+        a2 = semimajor_axis(P[order[pl+1]], star_mass)
+        a = 0.5*(a1+a2)
+        mu = (mass[order[pl]] + mass[order[pl+1]])/star_mass
+        mutual_hill_radius = calc_hill_sphere(a, mu)
+        if a2-a1  < min_num_mutual_hill_radii*mutual_hill_radius
+            found_instability = true
+            break
+        end
+    end # loop over neighboring planet pairs within cluster
+    return !found_instability
+end
+
+function test_stability(P::AbstractVector{Float64}, mass::AbstractVector{Float64}, star_mass::Float64, sim_param::SimParam; ecc::AbstractVector{Float64}=zeros(length(P)))
+    @assert length(P) == length(mass) == length(ecc)
+    min_num_mutual_hill_radii = get_real(sim_param, "num_mutual_hill_radii")
+    found_instability = false
+    order = sortperm(P)
+    a2 = semimajor_axis(P[order[1]], star_mass)
+    for pl in 1:(length(P)-1)
+        a1 = a2   # semimajor_axis(P[order[pl]],star_mass)
+        a2 = semimajor_axis(P[order[pl+1]], star_mass)
+        a = 0.5*(a1+a2)
+        mu = (mass[order[pl]] + mass[order[pl+1]])/star_mass
+        mutual_hill_radius = calc_hill_sphere(a, mu)
+        e1 = ecc[order[pl]]
+        e2 = ecc[order[pl+1]]
+        if a2*(1-e2)-a1*(1+e1) < min_num_mutual_hill_radii*mutual_hill_radius
+            found_instability = true
+            break
+        end
+    end # loop over neighboring planet pairs within cluster
+    return !found_instability
+end
+
+function is_period_ratio_near_resonance(period_ratio::Float64, sim_param::SimParam)
+    resonance_width = get_real(sim_param, "resonance_width")
+    resonance_width_factor = 1+resonance_width
+    period_ratios_to_check = get_any(sim_param, "period_ratios_mmr", Array{Float64,1})
+    result = false
+    for period_ratio_mmr in period_ratios_to_check
+        if period_ratio_mmr <= period_ratio <= period_ratio_mmr*resonance_width_factor
+            result = true
+            break
+        end
+    end
+    return result
+end
+
+function calc_if_near_resonance(P::AbstractVector{Float64}, sim_param::SimParam)
+    @assert issorted(P)   # TODO: OPT: Could remove once know it is safe
+    result = falses(length(P))
+    if length(P) >= 2
+        for i in 1:(length(P)-1)
+            if is_period_ratio_near_resonance(P[i+1]/P[i], sim_param)
+                result[i] = true
+                result[i+1] = true
+            end # near mmr
+        end # planets
+    end # at least two planets
+    return result
+end
+
+
+# Code to generate simple planetary systems.  For more sophisticated algorithms, see clustered model in He et al. 2019
+
 function generate_planet_mass_from_radius_powerlaw(r::Float64, sim_param::SimParam)
   mr_power_index::Float64 = get_real(sim_param,"mr_power_index")
   mr_const::Float64 = get_real(sim_param,"mr_const")
@@ -76,7 +160,7 @@ function generate_planet_mass_from_radius_powerlaw(r::Float64, sim_param::SimPar
   return m
 end
 
-function generate_planet_mass_from_radius_powerlaw(r::Float64, s::Star, o::Orbit, sim_param::SimParam)  # TODO SCI: IMPORTANT once have stability criteria, replace w/ better M-R relationship
+function generate_planet_mass_from_radius_powerlaw(r::Float64, s::Star, o::Orbit, sim_param::SimParam)  # TODO USER SCI: This is importnat if you are using a stability criteria.  In that case, this should be replacde w/ better M-R relationship.  See Matthias's clustered  model for example.
   generate_planet_mass_from_radius_powerlaw(r,sim_param)
 end
 
@@ -308,6 +392,16 @@ end
 function generate_e_omega_rayleigh(sim_param::SimParam; max_e::Float64 = 1.0)
   sigma_hk::Float64 = get_real(sim_param,"sigma_hk")
   generate_e_omega_rayleigh(sigma_hk, max_e=max_e)
+end
+
+function map_square_to_triangle(r1::Float64, r2::Float64, A::Vector{Float64}, B::Vector{Float64}, C::Vector{Float64})
+    #This function takes in a point (r1,r2) in the unit square (i.e. r1,r2 in [0,1]) and maps it to a point P=(x,y) in the triangle defined by vertices A,B,C
+    #If r1,r2 are uniformly drawn in [0,1], then the point P=(x,y) is also uniformly drawn in the triangle; see http://www.cs.princeton.edu/~funk/tog02.pdf (Section 4.2) for a reference
+
+    @assert 0. <= r1 <= 1.
+    @assert 0. <= r2 <= 1.
+    P = (1. - sqrt(r1)) .* A + (sqrt(r1)*(1. - r2)) .* B + (sqrt(r1)*r2) .* C
+    return P
 end
 
 function generate_planetary_system_hardcoded_example(star::StarAbstract, sim_param::SimParam; verbose::Bool = false)

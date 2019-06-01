@@ -4,6 +4,7 @@
 # Gather and prepare the window function data
 module WindowFunction
 
+import ..cdpp_durations
 export setup_window_function, get_window_function_data, get_window_function_id, eval_window_function
 
 #using DataArrays
@@ -124,11 +125,11 @@ function calc_period_idx(P::Float64)::Int64
         idx += 1
      end
   end
-  return idx   # TODO IMPORTANT: IMPLEMENT / TEST
+  return idx
 end
 
 function calc_duration_idx(D::Float64)::Int64
-  # NOTE IMPORTANT: Currently assumes we left wf data in hours, so deal with that conversion here
+  # NOTE: Currently assumes we left wf data in hours, so deal with that conversion here
   @assert(D>=zero(D)) ##### Make sure this function is still doing the right thing if D = 0!
   hours_in_day = 24
   idx = searchsortedlast(win_func_data.wf_durations_in_hrs,D*hours_in_day)
@@ -139,7 +140,7 @@ function calc_duration_idx(D::Float64)::Int64
         idx += 1
      end
   end
-  return idx   # TODO IMPORTANT: IMPLEMENT / TEST
+  return idx
 end
 
 
@@ -147,7 +148,7 @@ function eval_window_function(wf_idx::Int64=-1; Duration::Float64=0., Period::Fl
   D_idx = calc_duration_idx(Duration)
   P_idx = calc_period_idx(Period)
   wf = eval_window_function(wf_idx,D_idx,P_idx)
-  # TODO IMPORTANT: Improve way deal with missing wf values for some durations. Interpolate?
+  # TODO SCI DETAIL: Improve way deal with missing wf values for some durations. Interpolate?
   while wf<=zero(wf) && D_idx<length(win_func_data.wf_durations_in_hrs)
      D_idx += 1
      wf = eval_window_function(wf_idx,D_idx,P_idx)
@@ -212,13 +213,14 @@ function setup_OSD(sim_param::SimParam; force_reread::Bool = false)			#reads in 
   periods = OSD_file["periods"][1,:]		#1000 period values corresponding to OSD values in the third dimension of the allosds table
   kepids = OSD_file["kepids"]			#kepids corresponding to OSD values in the first dimension of the allosds table
   OSD_file = 0 # unload OSD file to save memory
-  durations = [1.5,2.,2.5,3.,3.5,4.5,5.,6.,7.5,9.,10.5,12.,12.5,15.] #14 durations corresponding to OSD values in the first dimension of theh allosds table
+  #durations = [1.5,2.,2.5,3.,3.5,4.5,5.,6.,7.5,9.,10.5,12.,12.5,15.] #14 durations corresponding to OSD values in the first dimension of theh allosds table
   periods_length = length(allosds[1,1,:])
   durations_length = length(allosds[1,:,1])
+  @assert length(cdpp_durations) == durations_length
   grid = Array{Float64,1}[]			#grid used in OSD_interpolator
-  push!(grid, durations)
+  push!(grid, cdpp_durations)
   push!(grid, periods)
-  global compareNoise = Float64[]		#testing variable used to make sure OSD_interpolator is producing reasonable snrs
+  #global compareNoise = Float64[]		#testing variable used to make sure OSD_interpolator is producing reasonable snrs
   OSD_setup = OSD_data(allosds, kepids, periods_length, durations_length, grid)
   allosds = 0 # unload OSD table to save memory
   add_param_fixed(sim_param,"read_OSD_function",true)

@@ -23,19 +23,21 @@ end
 num_planets(t::KeplerTarget) = sum( num_planets, t.sys)
 flux(t::KeplerTarget) = sum(flux,t.sys)+t.contam
 
+star_table(t::KeplerTarget, sym::Symbol) = StellarTable.star_table(t.sys[1].star.id,sym)
 
 
-function draw_asymmetric_normal(mu::Real, sig_plus::Real, sig_minus::Real)
+function draw_asymmetric_normal(mu::Real, sig_plus::Real, sig_minus::Real; rn = randn() )
   @assert sig_minus >= zero(sig_minus)
-  stdn = randn()
-  mu + ( (stdn>=zero(stdn)) ? sig_plus*stdn : sig_minus*stdn )
-  #mu + ( (stdn>=zero(stdn)) ? sig_plus*stdn : abs(sig_minus)*stdn )
+  mu + ( (stdn>=zero(stdn)) ? sig_plus*rn : sig_minus*rn )
+end
+
+function make_cdpp_array_empty(star_id::Integer)
+  cdpp_arr = Array{Float64,2}(undef,0,0)
 end
 
 function make_cdpp_array(star_id::Integer)
   star_table(id::Integer,sym::Symbol) = StellarTable.star_table(id,sym)::Float64
   cdpp_arr = (1.0e-6*sqrt(1.0/24.0/LC_duration)) .* Float64[star_table(star_id, :rrmscdpp01p5)*sqrt(1.5), star_table(star_id, :rrmscdpp02p0)*sqrt(2.), star_table(star_id,:rrmscdpp02p5)*sqrt(2.5), star_table(star_id,:rrmscdpp03p0)*sqrt(3.), star_table(star_id,:rrmscdpp03p5)*sqrt(3.5), star_table(star_id,:rrmscdpp04p5)*sqrt(4.5), star_table(star_id,:rrmscdpp05p0)*sqrt(5.), star_table(star_id,:rrmscdpp06p0)*sqrt(6.), star_table(star_id,:rrmscdpp07p5)*sqrt(7.5), star_table(star_id,:rrmscdpp09p0)*sqrt(9.), star_table(star_id,:rrmscdpp10p5)*sqrt(10.5), star_table(star_id,:rrmscdpp12p0)*sqrt(12.), star_table(star_id,:rrmscdpp12p5)*sqrt(12.5), star_table(star_id,:rrmscdpp15p0)*sqrt(15.)]
-  #cdpp_arr = Array{Float64,2}(undef,0,0)
 end
 
 function generate_kepler_target_from_table(sim_param::SimParam)
@@ -68,8 +70,9 @@ function generate_kepler_target_from_table(sim_param::SimParam)
             end
             rad_errp = max(star_table(star_id,:radius_err1), min_frac_rad_sigma*star_table(star_id,:radius))
             rad_errn = max(abs(star_table(star_id,:radius_err2)), min_frac_rad_sigma*star_table(star_id,:radius))
-            radius = draw_asymmetric_normal( star_table(star_id,:radius), rad_errp,  rad_errn)
-            mass = draw_asymmetric_normal( star_table(star_id,:mass), star_table(star_id,:mass_err1), abs(star_table(star_id,:mass_err2)) )
+            rn = randn()
+            radius = draw_asymmetric_normal( star_table(star_id,:radius), rad_errp,  rad_errn, rn=rn)
+            mass = draw_asymmetric_normal( star_table(star_id,:mass), star_table(star_id,:mass_err1), abs(star_table(star_id,:mass_err2)), rn=rn )
             #dens = draw_asymmetric_normal( star_table(star_id,:dens), star_table(star_id,:dens_err1), abs(star_table(star_id,:dens_err2)) )
             attmpt_num += 1
         end
@@ -90,8 +93,9 @@ function generate_kepler_target_from_table(sim_param::SimParam)
   end
   ld = LimbDarkeningParam4thOrder(star_table(star_id,:limbdark_coeff1), star_table(star_id,:limbdark_coeff2), star_table(star_id,:limbdark_coeff3), star_table(star_id,:limbdark_coeff4) )
   star = SingleStar(radius,mass,1.0,ld,star_id)     # TODO SCI: Allow for blends, binaries, etc.
-  cdpp_arr = make_cdpp_array(star_id)
-  contam = star_table(star_id, :contam) # rand(LogNormal(1.0e-3,1.0))      # TODO SCI: Come up with better description of Kepler targets, maybe draw from real contaminations
+  #cdpp_arr = make_cdpp_array(star_id)
+  cdpp_arr = make_cdpp_array_empty(star_id) # Note: Now leaving this field empty out and looking up each time via interpolate_cdpp_to_duration_lookup_cdpp instead of interpolate_cdpp_to_duration_use_target_cdpp
+  contam = star_table(star_id, :contam)
   data_span = star_table(star_id, :dataspan)
   duty_cycle = star_table(star_id, :dutycycle)
   if StellarTable.star_table_has_key(:wf_id)

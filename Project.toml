@@ -1,7 +1,7 @@
 name = "ExoplanetsSysSim"
 uuid = "e0ba718c-02ec-11e9-384b-dd2930072415"
 authors = ["Eric Ford <eford@psu.edu>"]
-version = "0.9.2"
+version = "1.0.0"
 
 [deps]
 CORBITS = "2ef0fd6c-02ed-11e9-22ee-f18eda6e5e26"
@@ -16,6 +16,7 @@ JLD = "4138dd39-2aa7-5051-a626-17a0bb65d9c8"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 LibGit2 = "76f85450-5226-5b5a-8eaa-529ad045b433"
 Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 PDMats = "90014a1f-27ba-587c-ab20-58faa44d9150"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
