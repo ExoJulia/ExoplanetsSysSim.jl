@@ -4,7 +4,7 @@ authors = ["Eric Ford <eford@psu.edu>"]
 version = "1.0.0"
 
 [deps]
-CORBITS = "2ef0fd6c-02ed-11e9-22ee-f18eda6e5e26"
+CORBITS = "19bfd68b-3085-5123-a7aa-2ec83b867ca4"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
