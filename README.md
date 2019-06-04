@@ -2,7 +2,7 @@
 Welcome to the ExoplanetsSysSim package for generating planetary systems and simulating observations of those systems with a transit survey.  Currently, SysSim focuses on NASA's Kepler mission, but we've aimed to develop a generic framework that can be applied to other surveys (e.g., K2, TESS, PLATO, LSST, etc.).
 
 # How to install ExoplanetsSysSim:
-* Make sure you have julia (v0.7 or greater) installed.  It's been tested on v1.0.2.
+* Make sure you have julia (v0.7 or greater) installed.  It's been tested on v1.1.0.
 
 * Make sure you have a recent git and [git-lfs](https://git-lfs.github.com/) installed.
 If you're using ICS-ACI, then do this by running the following for each shell (or putting it in your .bashrc)
@@ -38,12 +38,6 @@ One ICS-ACI, it's useful to set your JULIA_DEPOT_PATH to be in your work directo
 export JULIA_DEPOT_PATH=~/work/.julia
 ```
 
-* Run julia and install eford's version of the CORBITS.jl Julia package (not the registered package).
-```julia
-using Pkg
-Pkg.add(PackageSpec(url="https://github.com/eford/CORBITS.jl"))
-```
-
 * Run julia and install the ExoplanetsSysSim repo as a Julia package.  If you will only be using it as is, then you can use the repo under ExoJulia.  However, if you may be modifying source code in the ExoplanetsSysSim directory itself, then please fork your own version on github and develop that version instead.  For example,
 ```julia
 Pkg.develop(PackageSpec(url="git@github.com:ExoJulia/ExoplanetsSysSim.jl.git"))
@@ -68,12 +62,11 @@ include(joinpath(dirname(pathof(ExoplanetsSysSim)),"..","test","runtests.jl"))
 # How to use SysSim
 - Install ExoplanetsSysSim (see above)
 - Create your own repository containing code that will call ExoplanetsSysSim
-- Make it a Julia project by adding dependancies, including eford's CORBITS and ExoplanetsSysSim (see above)
+- Make it a Julia project by adding dependancies, including ExoplanetsSysSim.
 - Make your project depend on your development directory for ExoplanetsSysSim.  Since you've already installed ExoplanetSysSim, then Julia should find and reused the code in the dev directory rather than reinstalling it. 
 ```julia
 using Pkg
 Pkg.activate(".")
-Pkg.add(PackageSpec(url="https://github.com/eford/CORBITS.jl"))
 Pkg.instantiate()
 Pkg.develop(PackageSpec(url="git@github.com:ExoJulia/ExoplanetsSysSim.jl.git"))
 ```
