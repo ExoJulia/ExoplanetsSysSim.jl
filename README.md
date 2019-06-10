@@ -1,8 +1,8 @@
 # ExoplanetsSysSim
 Welcome to the ExoplanetsSysSim package for generating planetary systems and simulating observations of those systems with a transit survey.  Currently, SysSim focuses on NASA's Kepler mission, but we've aimed to develop a generic framework that can be applied to other surveys (e.g., K2, TESS, PLATO, LSST, etc.).
 
-# How to install ExoplanetsSysSim:
-* Make sure you have julia (v0.7 or greater) installed.  It's been tested on [Julia v1.1.0].  You can download Jula [here](https://julialang.org/downloads/)..
+## How to install ExoplanetsSysSim:
+* Make sure you have julia (v0.7 or greater) installed.  It's been tested on Julia v1.1.0.  You can download Jula [here](https://julialang.org/downloads/)..
 
 * Make sure you have a recent git and [git-lfs](https://git-lfs.github.com/) installed.
 If you're using ICS-ACI, then do this by running the following for each shell (or putting it in your .bashrc)
@@ -67,7 +67,7 @@ ln -s PATH_TO_SYSSIMDATA data
 using ExoplanetsSysSim
 include(joinpath(dirname(pathof(ExoplanetsSysSim)),"..","test","runtests.jl"))
 ```
-# How to use SysSim for your own Projects
+## How to use SysSim for your own Projects
 - Install ExoplanetsSysSim (see above)
 - Create your own repository containing code that will call ExoplanetsSysSim
 - Make it a Julia project by adding dependancies, including ExoplanetsSysSim.
@@ -78,15 +78,19 @@ Pkg.activate(".")
 Pkg.instantiate()
 Pkg.add("ExoplanetsSysSim")  # For the registered version of ExoplanetsSysSim
 # Pkg.develop("ExoplanetsSysSim") # To use your development branch of ExoplanetsSysSim.
-```
-   - If you want to share your Manifest.toml file, then make a copy of the Manifest.toml when you're not in develop mode.  Otherwise, users on other systems will get errors, since they can't access the same path with your development version.
-   - Have your project code load ExoplanetsSysSim and use it
+```   
+- Have your project code load ExoplanetsSysSim and use it
 ```julia
 using ExoplanetsSysSim
 ...
 ```
    - At the moment, you can test using 'examples/generatte_catalogs.jl' from Matthias's project at https://github.com/ExoJulia/SysSimExClusters
-* Write your papers
+   - By default, the master branch includes recent updates.  There is a chance that we occassionally break something that's not part of our test set.  Therefore, we've created a [stable branch](https://github.com/ExoJulia/ExoplanetsSysSim.jl/tree/stable) which users may wish to use for science results to be published.  If you find something broken in the stable branch, then please check the [open issues](https://github.com/ExoJulia/ExoplanetsSysSim.jl/issues).  if we're not yet aware of your problem, then notify the SysSim team via a new GitHub issue.
+   
+* Write your papers and share your code as a GitHub repo
+   - If you want to share your Manifest.toml file, then make a copy of the Manifest.toml when you're not in develop mode.  Otherwise, users on other systems will get errors, since they can't access the same path with your development version.
+   - If you'd like your code to appear as part of the [ExoJulia organization](https://github.com/ExoJulia/), then please let [Eric](https://github.com/eford) know.
+
 * Cite relevant code and associated publications
   - TODO: Add Zenodo link here
   - [Hsu et al. (2018) AJ 155, 205.](https://arxiv.org/ct?url=https%3A%2F%2Fdx.doi.org%2F10.3847%2F1538-3881%2Faab9a8&v=19ae32f8) (first published paper, describes basic SysSim functionality pre-1.0 version, please cite until Hsu et al. 2019 is accepted)
@@ -95,13 +99,13 @@ using ExoplanetsSysSim
   - [Brakensiek & Ragozzine (2016) ApJ 821, 47.](https://doi.org/10.3847/0004-637X/821/1/47) and (citation for CORBITS, please cite if you make use of averaging over viewing geometries)
 * Let the SysSim team know about your publication (or other use of SysSim, e.g., proposals) via pull request
 
-# Team:
-## Developers:
+## The SysSim Team:
+### Key Developers:
   * Eric Ford:  Conceptual framework, Development of core codebase
   * Matthias He:  Development and applicaiton of clustered multi-planet model
   * Danley Hsu:  Validation of Kepler model, distance functions and application to planet occurence rates
   * Darin Ragozzine:  Conceptual framework, Incorporating DR25 data products
-## Other Contributors/Consultants:
+### Other Contributors/Consultants:
   * Robert Morehead:  Preliminary model development, exploratory applications of ABC and comparing distance functions.
   * Keir Ashby:  Testing incorporation of DR 25 data products
   * Jessi Cisewski:  Advice on statistical methodlogy
@@ -109,7 +113,7 @@ using ExoplanetsSysSim
   * Tom Loredo:  Advice on statistical methodlogy
   * Robert Wolpert:  Advice on statistical methodlogy
 
-# Acknowledgements:
+### Acknowledgements:
 * NASA
   * [Kepler Mission](https://www.nasa.gov/mission_pages/kepler/main/index.html)
   * [Kepler Science Team](https://www.nasa.gov/mission_pages/kepler/team/teamroster)
