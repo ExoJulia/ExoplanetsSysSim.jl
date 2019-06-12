@@ -1,8 +1,8 @@
 # ExoplanetsSysSim
 Welcome to the ExoplanetsSysSim package for generating planetary systems and simulating observations of those systems with a transit survey.  Currently, SysSim focuses on NASA's Kepler mission, but we've aimed to develop a generic framework that can be applied to other surveys (e.g., K2, TESS, PLATO, LSST, etc.).
 
-# How to install ExoplanetsSysSim:
-* Make sure you have julia (v0.7 or greater) installed.  It's been tested on v1.0.2.
+## How to install ExoplanetsSysSim:
+* Make sure you have julia (v0.7 or greater) installed.  It's been tested on Julia v1.1.0.  You can download Jula [here](https://julialang.org/downloads/)..
 
 * Make sure you have a recent git and [git-lfs](https://git-lfs.github.com/) installed.
 If you're using ICS-ACI, then do this by running the following for each shell (or putting it in your .bashrc)
@@ -16,7 +16,7 @@ module load git
 
 * Create a clone of the [SysSimData repository](https://github.com/ExoJulia/SysSimData). 
    - If you might want to add/edit files in the SysSimData repository, then please fork your own repository on github and clone that instead of the repo in ExoJulia.  Then you can create pull requests when you're ready to add/update files in the main repository.  
-   - To create a new copy, use `git clone`.  I suggest somewhere outside of your home directory, .jula  or JULIA_DEPOT_PATH.  
+   - If you plan to use existing SysSimData files, then you can just create a new copy, use `git clone`.  I suggest somewhere outside of your home directory, .jula  or JULIA_DEPOT_PATH.  
 Once you've got a clone of a SysSimData repository, initialize and update the submodules.  Git "should" automatically download large files via git-lfs.  If not, then you can cd into the directory and run `git lfs fetch` to force it to update.  For example, 
 ```sh
 git clone git@github.com:ExoJulia/SysSimData.git 
@@ -38,82 +38,96 @@ One ICS-ACI, it's useful to set your JULIA_DEPOT_PATH to be in your work directo
 export JULIA_DEPOT_PATH=~/work/.julia
 ```
 
-* Run julia and install eford's version of the CORBITS.jl Julia package (not the registered package).
+* Run julia and install the ExoplanetsSysSim repo as a Julia package.  
+  - If you will only be using it as is, then you can simply add the registered repo under the ExoJulia orgaization.
 ```julia
 using Pkg
-Pkg.add(PackageSpec(url="https://github.com/eford/CORBITS.jl"))
+Pkg.add("ExoplanetsSysSim")
 ```
-
-* Run julia and install the ExoplanetsSysSim repo as a Julia package.  If you will only be using it as is, then you can use the repo under ExoJulia.  However, if you may be modifying source code in the ExoplanetsSysSim directory itself, then please fork your own version on github and develop that version instead.  For example,
+  - However, if you may be modifying source code in the ExoplanetsSysSim directory itself, then please fork your own version on github and develop that version instead.  For example,
 ```julia
 Pkg.develop(PackageSpec(url="git@github.com:ExoJulia/ExoplanetsSysSim.jl.git"))
 ```
-Since you'll set ExoplanetsSysSim to be under development, Julia will not automatically update it.  You'll have to do a `git pull` from dev/ExoplanetsSysSim to merge in new updates.
+(but replacing ExoJulia with the github username associated with your fork).  If you've set ExoplanetsSysSim to be under development, Julia will not automatically update it.  You'll have to do a `git pull` from dev/ExoplanetsSysSim to merge in new updates.
+
+  - Some MacOS users find that CORBITS does not build successfully.  This does not prevent MacOS users from using SysSim in "single-observer mode" (which is the mode used for existing publications).
 
 * Create a symlink so 'data' in the ExoplanetsSysSim directory points to the SysSimData repo. 
-   - Change into the directory where you're developing ExoplanetSysSim (${JULIA_DEPOT_PATH}/dev/ExoplanetsSysSim).  
+   - Change into the directory where you've added or developing ExoplanetSysSim (likely ${JULIA_DEPOT_PATH}/dev/ExoplanetsSysSim).  
    - Create a symlink named data 
 ```sh
 cd .julia/dev/ExoplanetsSysSim
-#cd ${JULIA_DEPOT_PATH}/dev/ExoplanetsSysSim  # if you set JULIA_DEPOT_PATH
+#cd ${JULIA_DEPOT_PATH}/dev/ExoplanetsSysSim  # alternative if you set JULIA_DEPOT_PATH
 ln -s PATH_TO_SYSSIMDATA data
 ```
    - Alternatively, you can override the default file paths to point to whereever you placed the binary input files.  Although this probably require more work. 
 
-* TODO CREATE TESTS.  Optionally, run some tests, e.g.
+* Optionally, run some tests, e.g.
 ```julia
 using ExoplanetsSysSim
 include(joinpath(dirname(pathof(ExoplanetsSysSim)),"..","test","runtests.jl"))
 ```
-# How to use SysSim
+## How to use SysSim for your own Projects
 - Install ExoplanetsSysSim (see above)
 - Create your own repository containing code that will call ExoplanetsSysSim
-- Make it a Julia project by adding dependancies, including eford's CORBITS and ExoplanetsSysSim (see above)
-- Make your project depend on your development directory for ExoplanetsSysSim.  Since you've already installed ExoplanetSysSim, then Julia should find and reused the code in the dev directory rather than reinstalling it. 
+- Make it a Julia project by adding dependancies, including ExoplanetsSysSim.
+- Make your project depend on either the registered version of ExoplanetsSysSim or the version in your development directory.  Since you've already installed ExoplanetSysSim, then Julia should find and reused the code in the dev directory rather than reinstalling it. 
 ```julia
 using Pkg
 Pkg.activate(".")
-Pkg.add(PackageSpec(url="https://github.com/eford/CORBITS.jl"))
 Pkg.instantiate()
-Pkg.develop(PackageSpec(url="git@github.com:ExoJulia/ExoplanetsSysSim.jl.git"))
-```
-   - If you want to share a Manifest.toml file, then make a copy of the Manifest.toml when you're not in develop mode.  Otherwise, users on other systems will get errors, since they can't access the same path with your development version.
-   - Have your project code load ExoplanetsSysSim and use it
+Pkg.add("ExoplanetsSysSim")  # For the registered version of ExoplanetsSysSim
+# Pkg.develop("ExoplanetsSysSim") # To use your development branch of ExoplanetsSysSim.
+```   
+- Have your project code load ExoplanetsSysSim and use it
 ```julia
 using ExoplanetsSysSim
 ...
 ```
-   - At the moment, you can test using 'generatte_systemls.jl' from Matthias's project at https://github.com/ExoJulia/SysSimExClusters
-* Write papers and cite relevant publications
+   - At the moment, you can test using 'examples/generatte_catalogs.jl' from Matthias's project at https://github.com/ExoJulia/SysSimExClusters
+   - By default, the master branch includes recent updates.  There is a chance that we occassionally break something that's not part of our test set.  Therefore, we've created a [stable branch](https://github.com/ExoJulia/ExoplanetsSysSim.jl/tree/stable) which users may wish to use for science results to be published.  If you find something broken in the stable branch, then please check the [open issues](https://github.com/ExoJulia/ExoplanetsSysSim.jl/issues).  if we're not yet aware of your problem, then notify the SysSim team via a new GitHub issue.
+   
+* Write your papers and share your code as a GitHub repo
+   - If you want to share your Manifest.toml file, then make a copy of the Manifest.toml when you're not in develop mode.  Otherwise, users on other systems will get errors, since they can't access the same path with your development version.
+   - If you'd like your code to appear as part of the [ExoJulia organization](https://github.com/ExoJulia/), then please let [Eric](https://github.com/eford) know.
 
-# Team:
-## Developers:
-  * Eric Ford
-  * Matthias He
-  * Danley Hsu
-  * Darin Ragozzine
-## Other Contributors/Consultants:
-  * Robert Morehead
-  * Keir Ashby
-  * Jessi Cisewski
-  * Chad Schafer
-  * Tom Loredo
-  * Robert Wolpert
+* Cite relevant code and associated publications
+  - TODO: Add Zenodo link here
+  - [Hsu et al. (2018) AJ 155, 205.](https://arxiv.org/ct?url=https%3A%2F%2Fdx.doi.org%2F10.3847%2F1538-3881%2Faab9a8&v=19ae32f8) (first published paper, describes basic SysSim functionality pre-1.0 version, please cite until Hsu et al. 2019 is accepted)
+  - [Hsu et al. (2019) submitted to AJ. arXiv:1902.01417](https://arxiv.org/abs/1902.01417) (most recent public paper, describing improvements to model for Kepler pipeline in SysSim v1.0, please cite if using SysSim v1.*)
+  - He et al. (2019) in prep (describes model for generating planetary systems, uses SysSim v1.0, please cite if using clustered model)
+  - [Brakensiek & Ragozzine (2016) ApJ 821, 47.](https://doi.org/10.3847/0004-637X/821/1/47) and (citation for CORBITS, please cite if you make use of averaging over viewing geometries)
+* Let the SysSim team know about your publication (or other use of SysSim, e.g., proposals) via pull request
 
-# Acknowledgements:
+## The SysSim Team:
+### Key Developers:
+  * Eric Ford:  Conceptual framework, Development of core codebase
+  * Matthias He:  Development and applicaiton of clustered multi-planet model
+  * Danley Hsu:  Validation of Kepler model, distance functions and application to planet occurence rates
+  * Darin Ragozzine:  Conceptual framework, Incorporating DR25 data products
+### Other Contributors/Consultants:
+  * Robert Morehead:  Preliminary model development, exploratory applications of ABC and comparing distance functions.
+  * Keir Ashby:  Testing incorporation of DR 25 data products
+  * Jessi Cisewski:  Advice on statistical methodlogy
+  * Chad Schafer:  Advice on statistical methodlogy
+  * Tom Loredo:  Advice on statistical methodlogy
+  * Robert Wolpert:  Advice on statistical methodlogy
+
+### Acknowledgements:
 * NASA
-  * Kepler Mission
-  * Kepler Science Team
+  * [Kepler Mission](https://www.nasa.gov/mission_pages/kepler/main/index.html)
+  * [Kepler Science Team](https://www.nasa.gov/mission_pages/kepler/team/teamroster)
   * Kepler Multi-body & Transit Timing Variations Working Groups
   * Origins of Solar Systems program, award NNX14AI76G
   * Exoplanets Research Program, award NNX15AE21G
-* The Pennsylvania State University
-  * Dept. of Astronomy & Astrophysics
-  * Center for Exoplanets & Habitable Worlds
-  * Eberly College of Science
-  * Institute for CyberScience
-  * Center for Astrostatistics
-  * Penn State Astrobiology Research Center
-* Florida Institute of Technology
-* University of Florida
-* Statistical and Applied Mathematical Sciences Institute
+* [The Pennsylvania State University](https://www.psu.edu/)
+  * [Dept. of Astronomy & Astrophysics](http://astro.psu.edu/)
+  * [Center for Exoplanets & Habitable Worlds](https://exoplanets.psu.edu/)
+  * [Eberly College of Science](http://science.psu.edu/)
+  * [Institute for CyberScience](https://ics.psu.edu/)
+  * [Center for Astrostatistics](https://astrostatistics.psu.edu/)
+  * [Penn State Astrobiology Research Center](http://psarc.weebly.com/)
+* [Brigham Young University](https://www.physics.byu.edu/)
+* [University of Florida](https://www.ufl.edu/)
+* [Florida Institute of Technology](https://www.fit.edu/)
+* [Statistical and Applied Mathematical Sciences Institute](https://www.samsi.info/)

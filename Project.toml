@@ -4,7 +4,7 @@ authors = ["Eric Ford <eford@psu.edu>"]
 version = "1.0.0"
 
 [deps]
-CORBITS = "2ef0fd6c-02ed-11e9-22ee-f18eda6e5e26"
+CORBITS = "19bfd68b-3085-5123-a7aa-2ec83b867ca4"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
@@ -22,3 +22,19 @@ Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StatsFuns = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
+
+[compat]
+CORBITS = ">= 1.0.0"
+CSV = ">= 0.4.3"
+Combinatorics = ">= 0.7"
+Compat = "2.1"
+DataFrames = ">= 0.17.1"
+Distributions = ">= 0.20"
+FileIO = "1"
+HypothesisTests = ">= 0.8"
+JLD = "0.9"
+JLD2 = ">= 0.1.2"
+PDMats = ">= 0.9.6"
+SpecialFunctions = ">= 0.7.2"
+StatsFuns = ">= 0.8.0"
+julia = ">= 0.7"
