@@ -6,6 +6,11 @@
 struct Planet        
   radius::Float64       # solar radii
   mass::Float64         # solar masses
+  id::Int64              # id number (for purposes of tracking or grouping planets)
+end
+
+function Planet(radius::Float64, mass::Float64; id::Int64=0)
+  pl = Planet(radius, mass, id)
 end
 
 #Planet() = Planet(0.0, 0.0)  # Commented out, so don't accidentally have invalid Planets

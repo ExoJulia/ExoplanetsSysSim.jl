@@ -2,7 +2,7 @@
 Welcome to the ExoplanetsSysSim package for generating planetary systems and simulating observations of those systems with a transit survey.  Currently, SysSim focuses on NASA's Kepler mission, but we've aimed to develop a generic framework that can be applied to other surveys (e.g., K2, TESS, PLATO, LSST, etc.).
 
 ## How to install ExoplanetsSysSim:
-* Make sure you have julia (v0.7 or greater) installed.  It's been tested on Julia v1.1.0.  You can download Jula [here](https://julialang.org/downloads/)..
+* Make sure you have julia (v0.7 or greater) installed.  It's been tested on Julia v1.1.0.  You can download Julia [here](https://julialang.org/downloads/).
 
 * Make sure you have a recent git and [git-lfs](https://git-lfs.github.com/) installed.
 If you're using ICS-ACI, then do this by running the following for each shell (or putting it in your .bashrc)
@@ -12,11 +12,11 @@ module load git
 ```
 * If you want to use ssh keys instead of https authentication (to minimize typing your github password), then:
   * Setup a local ssh key using ssh-keygen
-  * Tell Github about your ssh key:  Person Icon (upper right), Settings, SSH & GPG keys, New SSH Key.  Entry a name in the title box and paste the contents of `cat ~/.ssh/id_rsa.pub` into the "Key" box. Add SSH Key.
+  * Tell Github about your ssh key:  Person Icon (upper right), Settings, SSH & GPG keys, New SSH Key.  Enter a name in the title box and paste the contents of `cat ~/.ssh/id_rsa.pub` into the "Key" box. Add SSH Key.
 
 * Create a clone of the [SysSimData repository](https://github.com/ExoJulia/SysSimData). 
    - If you might want to add/edit files in the SysSimData repository, then please fork your own repository on github and clone that instead of the repo in ExoJulia.  Then you can create pull requests when you're ready to add/update files in the main repository.  
-   - If you plan to use existing SysSimData files, then you can just create a new copy, use `git clone`.  I suggest somewhere outside of your home directory, .jula  or JULIA_DEPOT_PATH.  
+   - If you plan to use existing SysSimData files, then you can just create a new copy, use `git clone`.  I suggest somewhere outside of your home directory, .julia  or JULIA_DEPOT_PATH.  
 Once you've got a clone of a SysSimData repository, initialize and update the submodules.  Git "should" automatically download large files via git-lfs.  If not, then you can cd into the directory and run `git lfs fetch` to force it to update.  For example, 
 ```sh
 git clone git@github.com:ExoJulia/SysSimData.git 
@@ -25,7 +25,7 @@ git submodule init
 git submodule update
 git lfs fetch # if the binary data files didn't download automatically
 ```
-   - If you're using ICS-ACI, then you could simply use the repo in /storage/home/ebf11/group/ebf11/kepler/SysSimData that should already be setup
+   - If you're using ICS-ACI, then you could simply use the repo in /storage/home/ebf11/group/ebf11/kepler/SysSimData that should already be set up
 
 * Make sure that your JULIA_DEPOT_PATH (~/.julia by default) does not include an old version of CORBITS or ExopalnetsSysSim.  If this is your first time using julia v1.0, then you probably don't need to do anything.  Otherwise, I see two ways to do this:
    - One way to avoid conflicts is to move or delete the JULIA_DEPOT_PATH.  But if there's _any chance_ that you might have things in your current CORBITS or ExoplanetsSysSim repots that you want to keep, then move rather than delete (or make a backup copy of those repos before deleting them).  Simillarly, if there are any other packages you've been developing, make sure you have a backup copy before deleting your JULIA_DEPOT_PATH.            Once you've fully cleared out the old repos, then 'Pkg.rm("CORBITS"); Pkg.rm("ExoplanetsSysSim"); Pkg.gc()' and 'rm -rf CORBITS ExoplanetsSysSim' both from the dev subdirectory of your JULIA_DEPOT_PATH (~/.julia by default).  Warning:  Sometimes Julia manages to keep these around despite my efforts to delete them, so I've found it's easier to rename my .julia directory and then copy any other repos in development mode back to my new .julia directory.
@@ -33,13 +33,13 @@ git lfs fetch # if the binary data files didn't download automatically
 ```sh
 export JULIA_DEPOT_PATH=~/.julia_clean
 ```
-One ICS-ACI, it's useful to set your JULIA_DEPOT_PATH to be in your work directory, as that is higher performance and has more space than your home directory.  I've put this in my .bashrc, so I don't forget and get confused about what's being modified.  E.g., 
+On ICS-ACI, it's useful to set your JULIA_DEPOT_PATH to be in your work directory, as that is higher performance and has more space than your home directory.  I've put this in my .bashrc, so I don't forget and get confused about what's being modified.  E.g., 
 ```sh
 export JULIA_DEPOT_PATH=~/work/.julia
 ```
 
 * Run julia and install the ExoplanetsSysSim repo as a Julia package.  
-  - If you will only be using it as is, then you can simply add the registered repo under the ExoJulia orgaization.
+  - If you will only be using it as is, then you can simply add the registered repo under the ExoJulia organization.
 ```julia
 using Pkg
 Pkg.add("ExoplanetsSysSim")
@@ -60,7 +60,7 @@ cd .julia/dev/ExoplanetsSysSim
 #cd ${JULIA_DEPOT_PATH}/dev/ExoplanetsSysSim  # alternative if you set JULIA_DEPOT_PATH
 ln -s PATH_TO_SYSSIMDATA data
 ```
-   - Alternatively, you can override the default file paths to point to whereever you placed the binary input files.  Although this probably require more work. 
+   - Alternatively, you can override the default file paths to point to wherever you placed the binary input files.  Although this probably require more work. 
 
 * Optionally, run some tests, e.g.
 ```julia
@@ -70,8 +70,8 @@ include(joinpath(dirname(pathof(ExoplanetsSysSim)),"..","test","runtests.jl"))
 ## How to use SysSim for your own Projects
 - Install ExoplanetsSysSim (see above)
 - Create your own repository containing code that will call ExoplanetsSysSim
-- Make it a Julia project by adding dependancies, including ExoplanetsSysSim.
-- Make your project depend on either the registered version of ExoplanetsSysSim or the version in your development directory.  Since you've already installed ExoplanetSysSim, then Julia should find and reused the code in the dev directory rather than reinstalling it. 
+- Make it a Julia project by adding dependencies, including ExoplanetsSysSim.
+- Make your project depend on either the registered version of ExoplanetsSysSim or the version in your development directory.  Since you've already installed ExoplanetSysSim, then Julia should find and reuse the code in the dev directory rather than reinstalling it. 
 ```julia
 using Pkg
 Pkg.activate(".")
@@ -84,8 +84,8 @@ Pkg.add("ExoplanetsSysSim")  # For the registered version of ExoplanetsSysSim
 using ExoplanetsSysSim
 ...
 ```
-   - At the moment, you can test using 'examples/generatte_catalogs.jl' from Matthias's project at https://github.com/ExoJulia/SysSimExClusters
-   - By default, the master branch includes recent updates.  There is a chance that we occassionally break something that's not part of our test set.  Therefore, we've created a [stable branch](https://github.com/ExoJulia/ExoplanetsSysSim.jl/tree/stable) which users may wish to use for science results to be published.  If you find something broken in the stable branch, then please check the [open issues](https://github.com/ExoJulia/ExoplanetsSysSim.jl/issues).  if we're not yet aware of your problem, then notify the SysSim team via a new GitHub issue.
+   - At the moment, you can test using 'examples/generate_catalogs.jl' from Matthias's project at https://github.com/ExoJulia/SysSimExClusters
+   - By default, the master branch includes recent updates.  There is a chance that we occasionally break something that's not part of our test set.  Therefore, we've created a [stable branch](https://github.com/ExoJulia/ExoplanetsSysSim.jl/tree/stable) which users may wish to use for science results to be published.  If you find something broken in the stable branch, then please check the [open issues](https://github.com/ExoJulia/ExoplanetsSysSim.jl/issues).  If we're not yet aware of your problem, then notify the SysSim team via a new GitHub issue.
    
 * Write your papers and share your code as a GitHub repo
    - If you want to share your Manifest.toml file, then make a copy of the Manifest.toml when you're not in develop mode.  Otherwise, users on other systems will get errors, since they can't access the same path with your development version.
