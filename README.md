@@ -84,7 +84,7 @@ Pkg.add("ExoplanetsSysSim")  # For the registered version of ExoplanetsSysSim
 using ExoplanetsSysSim
 ...
 ```
-   - At the moment, you can test using 'examples/generatte_catalogs.jl' from Matthias's project at https://github.com/ExoJulia/SysSimExClusters
+   - At the moment, you can test using 'examples/generate_catalogs.jl' from Matthias's project at https://github.com/ExoJulia/SysSimExClusters
    - By default, the master branch includes recent updates.  There is a chance that we occassionally break something that's not part of our test set.  Therefore, we've created a [stable branch](https://github.com/ExoJulia/ExoplanetsSysSim.jl/tree/stable) which users may wish to use for science results to be published.  If you find something broken in the stable branch, then please check the [open issues](https://github.com/ExoJulia/ExoplanetsSysSim.jl/issues).  if we're not yet aware of your problem, then notify the SysSim team via a new GitHub issue.
    
 * Write your papers and share your code as a GitHub repo
