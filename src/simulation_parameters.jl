@@ -4,7 +4,8 @@
 module SimulationParameters
 
 import Compat: @compat #, readstring
-import Pkg, LibGit2
+import LibGit2
+using Pkg
 using ExoplanetsSysSim
 
 export SimParam, add_param_fixed, add_param_active, update_param, set_active, set_inactive, is_active
@@ -14,9 +15,16 @@ export make_vector_of_active_param_keys, make_vector_of_sim_param, get_range_for
 export setup_sim_param_demo, test_sim_param_constructors
 #export preallocate_memory!
 
-const global version_id_str = "1.0.0"
-const global version_id_pair = ("version",version_id_str)
 const global julia_version_pair = ("version_julia",string(VERSION))
+
+function package_version_or_head(m::Module)
+    try
+        repo = LibGit2.GitRepo(dirname(pathof(m)))
+        return head = LibGit2.headname(repo)
+    catch
+        return Pkg.installed()[string(m)]
+    end
+end
 
 mutable struct SimParam
   param::Dict{String,Any}
@@ -37,28 +45,22 @@ function SimParam(p::Dict{String,Any})   # By default all parameters are set as 
 end
 
 function SimParam()
-  d = Dict{String,Any}([version_id_pair,julia_version_pair])
+  d = Dict{String,Any}([julia_version_pair, ("Pkg.installed",Pkg.installed())])
   return SimParam(d)
 end
 
 "Update SimParam() to define current state at run time, and not precompile time"
 function __init__()
+
 """
     SimParam()
 Creates a nearly empty SimParam object, with just the version id and potentially other information about the code, system, runtime, etc.
 """
 function SimParam()
-  d = Dict{String,Any}([version_id_pair,julia_version_pair,("hostname",gethostname()), ("time",time())])
-  try
-    d["ExoplanetsSysSim version"] = Pkg.installed()["ExoplanetsSysSim"]
-    #d["ExoplanetsSysSim directory"] = dirname(pathof(ExoplanetsSysSim))
-    #d["ExoplanetsSysSim branch"] = LibGit2.headname(LibGit2.GitRepo(dirname(pathof(ExoplanetsSysSim))))
-    #d["ExoplanetsSysSim head_oid"] = LibGit2.head_oid(LibGit2.GitRepo(dirname(pathof(ExoplanetsSysSim))))
-  catch
-    @warn("# Couldn't add full information about version of SysSim to SimParam.")
-  end
+  d = Dict{String,Any}([ julia_version_pair, ("hostname",gethostname()), ("time",time()), ("Pkg.installed",Pkg.installed()) ])
   SimParam(d)
 end
+
 end
 
 """
@@ -313,8 +315,8 @@ end
 
 function test_sim_param_constructors()
   oldval = log(2.0)
-  sim_param = SimParam( Dict([ ("version",version_id_str), ("num_kepler_targets",190000), ("log_eta_pl",oldval), ("max_tranets_in_sys",7)] ) )
-  get(sim_param,"version","")
+  sim_param = SimParam( Dict([ julia_version_pair, ("num_kepler_targets",190000), ("log_eta_pl",oldval), ("max_tranets_in_sys",7)] ) )
+  get(sim_param,"version_julia","")
   set_active(sim_param,"log_eta_pl")
   sp_vec = make_vector_of_sim_param(sim_param)
   sp_vec .+= 0.1
@@ -326,3 +328,4 @@ end
 end
 
 #test_sim_param_constructors()
+
