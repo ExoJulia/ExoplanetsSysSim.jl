@@ -352,6 +352,134 @@ function generate_period_and_sizes_power_law(s::Star, sim_param::SimParam; num_p
 end
 
 
+
+
+
+using SpecialFunctions
+
+cdf_lognormal(x::Float64; μ::Float64=0., σ::Float64=1.) = 0.5*erfc(-(log(x) - μ)/(σ*sqrt(2.)))
+
+function invert_cdf_lognormal(y::Float64; μ::Float64=0., σ::Float64=1.)
+    @assert 0<=y<=1
+    return exp(μ - sqrt(2.)*σ*erfcinv(2*y))
+end
+
+function draw_segmented_uniform(segments::Array{Tuple{Float64,Float64},1})
+    # Note: "segments" must be non-overlapping
+    n_segs = length(segments) # number of segments
+    if n_segs == 0
+        println("No segments given; returning NaN.")
+        return NaN
+    end
+    for (i,seg) in enumerate(segments)
+        @assert 0 <= seg[1] < seg[2] <= 1 # check that all segments are valid
+        if i != n_segs
+            @assert segments[i][2] < segments[i+1][1] # check to make sure there are no overlapping segments
+        end
+    end
+
+    seg_lengths = [seg[2]-seg[1] for seg in segments]
+    sum_lengths = sum(seg_lengths)
+
+    u_draw = rand()
+    for (i,seg) in enumerate(segments)
+        # Map the union of the segments uniformly to the domain [0,1]:
+        if sum(seg_lengths[1:i-1])/sum_lengths <= u_draw < sum(seg_lengths[1:i])/sum_lengths
+            return rand(Uniform(seg[1], seg[2]))
+        end
+    end
+end
+
+function compute_unstable_regions_periods_given_planets(P::AbstractVector{Float64}, mass::AbstractVector{Float64}, star_mass::Float64, sim_param::SimParam; verbose::Bool=false)
+    @assert length(P) == length(mass)
+    min_num_mutual_hill_radii = get_real(sim_param, "num_mutual_hill_radii")
+    order = sortperm(P)
+
+    P_segments_unstable = Tuple{Float64,Float64}[]
+    for pl in 1:length(P)
+        a = semimajor_axis(P[order[pl]], star_mass)
+        mu = mass[order[pl]]/star_mass
+        hill_radius = calc_hill_sphere(a, mu)
+        a_lower, a_upper = a - hill_radius*min_num_mutual_hill_radii, a + hill_radius*min_num_mutual_hill_radii
+        @assert 0 < a_lower < a_upper
+        P_lower, P_upper = period_given_semimajor_axis(a_lower, mass[order[pl]]+star_mass), period_given_semimajor_axis(a_upper, mass[order[pl]]+star_mass)
+        if verbose
+            println("P_blocked: ", (P_lower, P_upper))
+        end
+        push!(P_segments_unstable, (P_lower, P_upper))
+    end
+    return P_segments_unstable
+end
+
+function compute_allowed_regions_cdf_lognormal(segments_blocked::Array{Tuple{Float64,Float64},1}; μ::Float64=0., σ::Float64=1., x_min::Float64=0., x_max::Float64=Inf)
+    @assert 0 <= x_min < x_max <= Inf
+
+    # Make a list of non-overlapping segments in period deemed unstable:
+    segments_blocked_nonoverlapping = Tuple{Float64,Float64}[]
+    P_start, P_stop = segments_blocked[1]
+    for i in 1:length(segments_blocked)-1
+        if P_stop > segments_blocked[i+1][1] # segments overlap
+            P_stop = segments_blocked[i+1][2]
+        else # segments do not overlap
+            push!(segments_blocked_nonoverlapping, (P_start, P_stop))
+            P_start, P_stop = segments_blocked[i+1]
+        end
+    end
+    push!(segments_blocked_nonoverlapping, (P_start, P_stop))
+
+    # Make a list of non-overlapping, allowed segments in the cdf:
+    cdf_segments_allowed = Tuple{Float64,Float64}[]
+    n_seg_max = length(segments_blocked_nonoverlapping)+1 # maximum number of allowed segments if all the unstable segments fit between x_min and x_max
+    for i in 1:n_seg_max
+        if i==1
+            if x_min < segments_blocked_nonoverlapping[i][1]
+                cdf_start, cdf_stop = cdf_lognormal(x_min; μ=μ, σ=σ), cdf_lognormal(segments_blocked_nonoverlapping[i][1]; μ=μ, σ=σ)
+                push!(cdf_segments_allowed, (cdf_start, cdf_stop))
+            end
+        elseif i==n_seg_max
+            if x_max > segments_blocked_nonoverlapping[i-1][2]
+                cdf_start, cdf_stop = cdf_lognormal(segments_blocked_nonoverlapping[i-1][2]; μ=μ, σ=σ), cdf_lognormal(x_max; μ=μ, σ=σ)
+                push!(cdf_segments_allowed, (cdf_start, cdf_stop))
+            end
+        else
+            cdf_start, cdf_stop = cdf_lognormal(segments_blocked_nonoverlapping[i-1][2]; μ=μ, σ=σ), cdf_lognormal(segments_blocked_nonoverlapping[i][1]; μ=μ, σ=σ)
+            push!(cdf_segments_allowed, (cdf_start, cdf_stop))
+        end
+    end
+
+    return cdf_segments_allowed
+end
+
+function draw_lognormal_allowed_regions(segments_blocked::Array{Tuple{Float64,Float64},1}; μ::Float64=0., σ::Float64=1., x_min::Float64=0., x_max::Float64=Inf)
+    cdf_segments_allowed = compute_allowed_regions_cdf_lognormal(segments_blocked; μ=μ, σ=σ, x_min=x_min, x_max=x_max)
+    if length(cdf_segments_allowed) == 0
+        println("No allowed regions left to draw from; returning NaN.")
+        return NaN
+    else
+        y = draw_segmented_uniform(cdf_segments_allowed)
+        return invert_cdf_lognormal(y; μ=μ, σ=σ)
+    end
+end
+
+function draw_period_lognormal_allowed_regions(P::AbstractVector{Float64}, mass::AbstractVector{Float64}, star_mass::Float64, sim_param::SimParam; μ::Float64=0., σ::Float64=1., x_min::Float64=0., x_max::Float64=Inf, verbose::Bool=false)
+    @assert length(P) == length(mass)
+    @assert star_mass > 0
+    @assert all(P .> 0)
+    @assert all(mass .> 0)
+
+    if length(P) > 0
+        P_segments_unstable = compute_unstable_regions_periods_given_planets(P, mass, star_mass, sim_param; verbose=verbose)
+        P_draw = draw_lognormal_allowed_regions(P_segments_unstable; μ=μ, σ=σ, x_min=x_min, x_max=x_max)
+    else
+        P_draw = invert_cdf_lognormal(rand(Uniform(cdf_lognormal(x_min; μ=μ, σ=σ), cdf_lognormal(x_max; μ=μ, σ=σ))); μ=μ, σ=σ)
+    end
+    return P_draw
+end
+
+
+
+
+
 function TruncatedUpper(d::Distributions.UnivariateDistribution, u::Float64)
     zero(u) < u || error("lower bound should be less than upper bound.")
     lcdf = zero(u)
