@@ -390,8 +390,8 @@ function draw_segmented_uniform(segments::Array{Tuple{Float64,Float64},1})
     end
 end
 
-function compute_unstable_regions_periods_given_planets(P::AbstractVector{Float64}, mass::AbstractVector{Float64}, star_mass::Float64, sim_param::SimParam; verbose::Bool=false)
-    @assert length(P) == length(mass)
+function compute_unstable_regions_periods_given_planets(P::AbstractVector{Float64}, mass::AbstractVector{Float64}, star_mass::Float64, sim_param::SimParam; ecc::AbstractVector{Float64}=zeros(length(P)), verbose::Bool=false)
+    @assert length(P) == length(mass) == length(ecc)
     min_num_mutual_hill_radii = get_real(sim_param, "num_mutual_hill_radii")
     order = sortperm(P)
 
@@ -400,7 +400,7 @@ function compute_unstable_regions_periods_given_planets(P::AbstractVector{Float6
         a = semimajor_axis(P[order[pl]], star_mass)
         mu = mass[order[pl]]/star_mass
         hill_radius = calc_hill_sphere(a, mu)
-        a_lower, a_upper = a - hill_radius*min_num_mutual_hill_radii, a + hill_radius*min_num_mutual_hill_radii
+        a_lower, a_upper = a*(1. - ecc[order[pl]]) - hill_radius*min_num_mutual_hill_radii, a*(1. + ecc[order[pl]]) + hill_radius*min_num_mutual_hill_radii
         @assert 0 < a_lower < a_upper
         P_lower, P_upper = period_given_semimajor_axis(a_lower, mass[order[pl]]+star_mass), period_given_semimajor_axis(a_upper, mass[order[pl]]+star_mass)
         if verbose
@@ -461,14 +461,15 @@ function draw_lognormal_allowed_regions(segments_blocked::Array{Tuple{Float64,Fl
     end
 end
 
-function draw_period_lognormal_allowed_regions(P::AbstractVector{Float64}, mass::AbstractVector{Float64}, star_mass::Float64, sim_param::SimParam; μ::Float64=0., σ::Float64=1., x_min::Float64=0., x_max::Float64=Inf, verbose::Bool=false)
-    @assert length(P) == length(mass)
+function draw_period_lognormal_allowed_regions(P::AbstractVector{Float64}, mass::AbstractVector{Float64}, star_mass::Float64, sim_param::SimParam; μ::Float64=0., σ::Float64=1., x_min::Float64=0., x_max::Float64=Inf, ecc::AbstractVector{Float64}=zeros(length(P)), verbose::Bool=false)
+    @assert length(P) == length(mass) == length(ecc)
     @assert star_mass > 0
     @assert all(P .> 0)
     @assert all(mass .> 0)
+    @assert all(ecc .>= 0)
 
     if length(P) > 0
-        P_segments_unstable = compute_unstable_regions_periods_given_planets(P, mass, star_mass, sim_param; verbose=verbose)
+        P_segments_unstable = compute_unstable_regions_periods_given_planets(P, mass, star_mass, sim_param; ecc=ecc, verbose=verbose)
         P_draw = draw_lognormal_allowed_regions(P_segments_unstable; μ=μ, σ=σ, x_min=x_min, x_max=x_max)
     else
         P_draw = invert_cdf_lognormal(rand(Uniform(cdf_lognormal(x_min; μ=μ, σ=σ), cdf_lognormal(x_max; μ=μ, σ=σ))); μ=μ, σ=σ)
