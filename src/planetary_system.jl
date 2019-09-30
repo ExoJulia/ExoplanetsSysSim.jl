@@ -401,7 +401,8 @@ function compute_unstable_regions_periods_given_planets(P::AbstractVector{Float6
         mu = mass[order[pl]]/star_mass
         hill_radius = calc_hill_sphere(a, mu)
         a_lower, a_upper = a*(1. - ecc[order[pl]]) - hill_radius*min_num_mutual_hill_radii, a*(1. + ecc[order[pl]]) + hill_radius*min_num_mutual_hill_radii
-        @assert 0 < a_lower < a_upper
+        a_lower = max(a_lower, 0.) # set a_lower=0 if negative
+        @assert 0 <= a_lower < a_upper
         P_lower, P_upper = period_given_semimajor_axis(a_lower, mass[order[pl]]+star_mass), period_given_semimajor_axis(a_upper, mass[order[pl]]+star_mass)
         if verbose
             println("P_blocked: ", (P_lower, P_upper))
