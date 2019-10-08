@@ -47,6 +47,9 @@ export PlanetarySystemAbstract, PlanetarySystemSingleStar, PlanetarySystem
 include("planetary_system.jl")
 export test_stability, is_period_ratio_near_resonance, calc_if_near_resonance
 export draw_truncated_poisson, draw_power_law, map_square_to_triangle
+export cdf_lognormal, invert_cdf_lognormal, cdf_power_law, invert_cdf_power_law, draw_segmented_uniform
+export compute_unstable_regions_periods_given_planets, compute_unstable_mutualHill_regions_periodscales_given_clusters, compute_regions_non_overlapping, compute_allowed_regions_cdf_lognormal, compute_allowed_regions_cdf_power_law
+export draw_lognormal_allowed_regions, draw_power_law_allowed_regions, draw_period_lognormal_allowed_regions, draw_period_lognormal_allowed_regions_Hill, draw_period_lognormal_allowed_regions_mutualHill, draw_periodscale_power_law_allowed_regions_mutualHill
 #include("corbits.jl")
 #export prob_of_transits_approx
 include("window_function.jl")
@@ -60,7 +63,7 @@ export num_planets, generate_kepler_target_from_table, generate_kepler_target_si
 include("target.jl")
 export KeplerTargetObs
 include("transit_observations.jl")
-export semimajor_axis
+export semimajor_axis, period_given_semimajor_axis
 #export setup_koi_table, koi_table, num_koi
 export KeplerPhysicalCatalog, KeplerObsCatalog
 include("kepler_catalog.jl")

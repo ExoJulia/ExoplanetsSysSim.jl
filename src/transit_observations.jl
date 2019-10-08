@@ -32,6 +32,8 @@ duration(obs::TransitPlanetObs) = obs.duration
 
 semimajor_axis(P::Float64, M::Float64) = (grav_const/(4pi^2)*M*P*P)^(1/3)
 
+period_given_semimajor_axis(a::Float64, M::Float64) = sqrt((4pi^2*a^3)/(grav_const*M))
+
 function semimajor_axis(ps::PlanetarySystemAbstract, id::Integer)
   M = mass(ps.star) + ps.planet[id].mass   # TODO SCI DETAIL: Replace with Jacobi mass?  Not important unless start including TTVs, even then unlikely to matter
   @assert(M>0.0)
