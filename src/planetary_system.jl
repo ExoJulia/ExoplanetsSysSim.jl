@@ -932,13 +932,32 @@ function generate_e_omega_rayleigh(sim_param::SimParam; max_e::Float64 = 1.0)
   generate_e_omega_rayleigh(sigma_hk, max_e=max_e)
 end
 
-function map_square_to_triangle(r1::Float64, r2::Float64, A::Vector{Float64}, B::Vector{Float64}, C::Vector{Float64})
-    #This function takes in a point (r1,r2) in the unit square (i.e. r1,r2 in [0,1]) and maps it to a point P=(x,y) in the triangle defined by vertices A,B,C
-    #If r1,r2 are uniformly drawn in [0,1], then the point P=(x,y) is also uniformly drawn in the triangle; see http://www.cs.princeton.edu/~funk/tog02.pdf (Section 4.2) for a reference
 
-    @assert 0. <= r1 <= 1.
-    @assert 0. <= r2 <= 1.
-    P = (1. - sqrt(r1)) .* A + (sqrt(r1)*(1. - r2)) .* B + (sqrt(r1)*r2) .* C
+
+struct ParamsTriangle
+    id_xy::Tuple{Int64,Int64} # indices of the two transformed parameters in a vector of parameters
+    # A,B,C are vertices of the triangle for parameters (x,y), in no particular order
+    A::Tuple{Float64,Float64}
+    B::Tuple{Float64,Float64}
+    C::Tuple{Float64,Float64}
+end
+
+"""
+    map_square_to_triangle(r1, r2, pt)
+
+Map a point (r1, r2) in the unit square to a point P=(x,y) in the triangle defined by vertices A,B,C. If r1,r2 are uniformly drawn in [0,1], then the point P is also uniformly drawn in the triangle; see http://www.cs.princeton.edu/~funk/tog02.pdf (Section 4.2) for a reference.
+
+# Arguments:
+- `r1r2::Tuple{Float64,Float64}`: a point in the unit square representing two transformed parameters.
+- `pt::ParamsTriangle`: an object containing the indices of the two transformed parameters and vertices of the triangle defining the bounds for the two parameters.
+
+# Returns:
+- `P::Tuple{Float64,Float64}`: a point for the two parameters in the triangle corresponding to the point given by `r1r2` in the unit square.
+"""
+function map_square_to_triangle(r1r2::Tuple{Float64,Float64}, pt::ParamsTriangle)
+    @assert all(0 .<= r1r2 .<= 1)
+    r1, r2 = r1r2
+    P = (1. - sqrt(r1)) .* pt.A .+ (sqrt(r1)*(1. - r2)) .* pt.B .+ (sqrt(r1)*r2) .* pt.C
     return P
 end
 

@@ -97,7 +97,7 @@ using ExoplanetsSysSim
   - [![DOI](https://zenodo.org/badge/179777476.svg)](https://zenodo.org/badge/latestdoi/179777476) Citation for core SysSim code base.
   - [Hsu et al. (2018) AJ 155, 205.](https://arxiv.org/ct?url=https%3A%2F%2Fdx.doi.org%2F10.3847%2F1538-3881%2Faab9a8&v=19ae32f8) (first published paper, describes basic SysSim functionality pre-1.0 version, please cite until Hsu et al. 2019 is accepted)
   - [Hsu et al. (2019) submitted to AJ. arXiv:1902.01417](https://arxiv.org/abs/1902.01417) (most recent public paper, describing improvements to model for Kepler pipeline in SysSim v1.0, please cite if using SysSim v1.*)
-  - [He, Ford, & Ragozzine (2019) submitted to MNRAS. arXiv:1907.07773](https://arxiv.org/abs/1907.07773) (describes model for generating planetary systems, uses SysSim v1.0, please cite if using clustered model)
+  - [He, Ford, & Ragozzine (2019) MNRAS 490, 4575-4605](https://doi.org/10.1093/mnras/stz2869) (describes model for generating planetary systems, uses SysSim v1.0, please cite if using clustered model)
   - [Brakensiek & Ragozzine (2016) ApJ 821, 47.](https://doi.org/10.3847/0004-637X/821/1/47) and (citation for CORBITS, please cite if you make use of averaging over viewing geometries)
 * Let the SysSim team know about your publication (or other use of SysSim, e.g., proposals) via pull request
 
