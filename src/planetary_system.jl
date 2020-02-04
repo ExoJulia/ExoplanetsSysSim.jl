@@ -329,6 +329,16 @@ function generate_periods_power_law(s::Star, sim_param::SimParam; num_pl::Intege
     return Plist
 end
 
+function generate_periods_broken_power_law(s::Star, sim_param::SimParam; num_pl::Integer = 1)
+    power_law_P1::Float64 = get_real(sim_param,"power_law_P1")
+    power_law_P2::Float64 = get_real(sim_param,"power_law_P2")
+    min_period::Float64 = get_real(sim_param,"min_period")
+    max_period::Float64 = get_real(sim_param,"max_period")
+    break_period::Float64 = get_real(sim_param,"break_period")
+    Plist = draw_broken_power_law(power_law_P1,power_law_P2,min_period,max_period,break_period, num_pl)
+    return Plist
+end
+
 function generate_sizes_power_law(s::Star, sim_param::SimParam; num_pl::Integer = 1)
     power_law_r::Float64 = get_real(sim_param,"power_law_r")
     min_radius::Float64 = get_real(sim_param,"min_radius")
