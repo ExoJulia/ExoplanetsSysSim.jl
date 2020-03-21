@@ -6,15 +6,21 @@
 #if !@isdefined PlanetarySystemAbstract
   @compat abstract type PlanetarySystemAbstract end
 
+  struct SystemPlane
+    incl::Float64 # radians; relative to sky plane
+    asc_node::Float64 # radians; relative to sky plane
+  end
+
   struct PlanetarySystem{StarT<:StarAbstract} <: PlanetarySystemAbstract
     star::StarT
     planet::Vector{Planet}
     orbit::Vector{Orbit}
+    system_plane::SystemPlane
 
       # TODO DETAIL: Setup inner constructor to enforce equal number of planets & orbits
-      function PlanetarySystem{StarT}(s::StarT, p::AbstractVector{Planet}, o::AbstractVector{Orbit}) where {StarT<:StarAbstract}
+      function PlanetarySystem{StarT}(s::StarT, p::AbstractVector{Planet}, o::AbstractVector{Orbit}, sp::SystemPlane) where {StarT<:StarAbstract}
         @assert(length(p)==length(o)) # else error(string("Number of planets must match number of orbits: Np= ",length(p)," No= ",length(o)))
-        new(s,p,o)
+        new(s,p,o,sp)
       end
   end
 
@@ -27,11 +33,15 @@ function PlanetarySystem(s::StarT) where {StarT<:StarAbstract}
 end
 
 function PlanetarySystem(s::StarT, p::Planet, o::Orbit) where {StarT<:StarAbstract}
-   PlanetarySystem(s,[p],[o])  # Constructor for a single Planet System
+   PlanetarySystem(s,[p],[o],SystemPlane(0.,0.))  # Constructor for a single Planet System
 end
 
 function PlanetarySystem(s::StarT, p::AbstractVector{Planet}, o::AbstractVector{Orbit}) where {StarT<:StarAbstract}
-   PlanetarySystem{StarT}(s,p,o)  # Constructor for a single Planet System
+   PlanetarySystem{StarT}(s,p,o,SystemPlane(0.,0.))  # Constructor for a single Planet System
+end
+
+function PlanetarySystem(s::StarT, p::AbstractVector{Planet}, o::AbstractVector{Orbit}, sp::SystemPlane) where {StarT<:StarAbstract}
+    PlanetarySystem{StarT}(s,p,o,sp)
 end
 
 function PlanetarySystem(ps::PlanetarySystem{StarT}, keep::AbstractVector{Int64})  where {StarT<:StarAbstract} # Why doesn't this work?
