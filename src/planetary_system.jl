@@ -6,15 +6,21 @@
 #if !@isdefined PlanetarySystemAbstract
   @compat abstract type PlanetarySystemAbstract end
 
+  struct SystemPlane
+    incl::Float64 # radians; relative to sky plane
+    asc_node::Float64 # radians; relative to sky plane
+  end
+
   struct PlanetarySystem{StarT<:StarAbstract} <: PlanetarySystemAbstract
     star::StarT
     planet::Vector{Planet}
     orbit::Vector{Orbit}
+    system_plane::SystemPlane
 
       # TODO DETAIL: Setup inner constructor to enforce equal number of planets & orbits
-      function PlanetarySystem{StarT}(s::StarT, p::AbstractVector{Planet}, o::AbstractVector{Orbit}) where {StarT<:StarAbstract}
+      function PlanetarySystem{StarT}(s::StarT, p::AbstractVector{Planet}, o::AbstractVector{Orbit}, sp::SystemPlane) where {StarT<:StarAbstract}
         @assert(length(p)==length(o)) # else error(string("Number of planets must match number of orbits: Np= ",length(p)," No= ",length(o)))
-        new(s,p,o)
+        new(s,p,o,sp)
       end
   end
 
@@ -27,11 +33,15 @@ function PlanetarySystem(s::StarT) where {StarT<:StarAbstract}
 end
 
 function PlanetarySystem(s::StarT, p::Planet, o::Orbit) where {StarT<:StarAbstract}
-   PlanetarySystem(s,[p],[o])  # Constructor for a single Planet System
+   PlanetarySystem(s,[p],[o],SystemPlane(0.,0.))  # Constructor for a single Planet System
 end
 
 function PlanetarySystem(s::StarT, p::AbstractVector{Planet}, o::AbstractVector{Orbit}) where {StarT<:StarAbstract}
-   PlanetarySystem{StarT}(s,p,o)  # Constructor for a single Planet System
+   PlanetarySystem{StarT}(s,p,o,SystemPlane(0.,0.))  # Constructor for a single Planet System
+end
+
+function PlanetarySystem(s::StarT, p::AbstractVector{Planet}, o::AbstractVector{Orbit}, sp::SystemPlane) where {StarT<:StarAbstract}
+    PlanetarySystem{StarT}(s,p,o,sp)
 end
 
 function PlanetarySystem(ps::PlanetarySystem{StarT}, keep::AbstractVector{Int64})  where {StarT<:StarAbstract} # Why doesn't this work?
@@ -326,6 +336,16 @@ function generate_periods_power_law(s::Star, sim_param::SimParam; num_pl::Intege
     min_period::Float64 = get_real(sim_param,"min_period")
     max_period::Float64 = get_real(sim_param,"max_period")
     Plist = draw_power_law(power_law_P,min_period,max_period, num_pl)
+    return Plist
+end
+
+function generate_periods_broken_power_law(s::Star, sim_param::SimParam; num_pl::Integer = 1)
+    power_law_P1::Float64 = get_real(sim_param,"power_law_P1")
+    power_law_P2::Float64 = get_real(sim_param,"power_law_P2")
+    min_period::Float64 = get_real(sim_param,"min_period")
+    max_period::Float64 = get_real(sim_param,"max_period")
+    break_period::Float64 = get_real(sim_param,"break_period")
+    Plist = draw_broken_power_law(power_law_P1,power_law_P2,min_period,max_period,break_period, num_pl)
     return Plist
 end
 
