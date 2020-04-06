@@ -224,6 +224,7 @@ end
 
 
 function calc_snr_if_transit_central(t::KeplerTarget, s::Integer, p::Integer, sim_param::SimParam)
+  period = t.sys[s].orbit[p].P
   depth = calc_transit_depth(t,s,p)
   duration_central = calc_transit_duration_eff_central(t,s,p)
   kepid = StellarTable.star_table(t.sys[s].star.id, :kepid)
