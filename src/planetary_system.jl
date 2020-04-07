@@ -182,13 +182,15 @@ function generate_num_planets_poisson(lambda::Real, max_planets::Integer; min_pl
   bug_fixed = false # TODO OPT: true case should work, but Danley found bug in Distributions package.  Revert once fixed for speed.
   local n
   if bug_fixed
-     d = Distributions.Truncated(Distributions.Poisson(lambda),min_planets,max_planets)
+     # d = Distributions.Truncated(Distributions.Poisson(lambda),min_planets,max_planets)
+     d = truncated(Distributions.Poisson(lambda),min_planets,max_planets)
      n = rand(d)
   else
      if min_planets == 0
         min_planets = -1
      end
-     d = Distributions.Truncated(Distributions.Poisson(lambda),min_planets,max_planets)
+     # d = Distributions.Truncated(Distributions.Poisson(lambda),min_planets,max_planets)
+     d = truncated(Distributions.Poisson(lambda),min_planets,max_planets)
      n = rand(d)
      #=
      n = -1
@@ -242,7 +244,7 @@ function generate_period_and_sizes_log_normal(s::Star, sim_param::SimParam; num_
     #Rlist = rand(rdist,num_pl)
     #Plist = rand(Pdist,num_pl)
     #idx_keep = find(i->(min_radius<=Rlist[i]<=max_radius) && (min_period<=Plist[i]<=max_period), 1:num_pl )
-    #return Plist[idx_keep], Rlist[idx_keep]  # replaced because want to return exactly num_pl.  Could use Truncated to restore above code.
+    #return Plist[idx_keep], Rlist[idx_keep]  # replaced because want to return exactly num_pl.  Could use truncated to restore above code.
     Rlist = zeros(num_pl)
     Plist = zeros(num_pl)
     for i in 1:num_pl
@@ -910,6 +912,8 @@ end
 
 
 
+#=
+# Removed now that Truncated is deprecated in favor of truncated
 function TruncatedUpper(d::Distributions.UnivariateDistribution, u::Float64)
     zero(u) < u || error("lower bound should be less than upper bound.")
     lcdf = zero(u)
@@ -917,11 +921,12 @@ function TruncatedUpper(d::Distributions.UnivariateDistribution, u::Float64)
     tp = ucdf - lcdf
     Distributions.Truncated{typeof(d),Distributions.value_support(typeof(d))}(d, zero(u), u, lcdf, ucdf, tp, log(tp))
 end
-
+=#
 
 function generate_e_omega_rayleigh_direct(sigma_hk::Float64; max_e::Float64 = 1.0)
   @assert(0<max_e<=1.0)
-  ecc::Float64 = rand( TruncatedUpper(Rayleigh(sigma_hk),max_e) )
+  # ecc::Float64 = rand( TruncatedUpper(Rayleigh(sigma_hk),max_e) )
+  ecc::Float64 = rand( truncated(Rayleigh(sigma_hk),zero(sigma_hk),max_e) )
   w::Float64 = 2pi*rand()
   return ecc, w
 end
