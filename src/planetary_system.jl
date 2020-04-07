@@ -1036,6 +1036,10 @@ function generate_planetary_system_hardcoded_example(star::StarAbstract, sim_par
   end
 end
 
+function generate_planetary_system_empty(star::StarAbstract, sim_param::SimParam; verbose::Bool = false)
+    return PlanetarySystem(star)::PlanetarySystem
+end
+
 function generate_planetary_system_uncorrelated_incl(star::StarAbstract, sim_param::SimParam; verbose::Bool = false)
   # load functions to use for drawing parameters
    generate_planet_mass_from_radius = get_function(sim_param,"generate_planet_mass_from_radius")
