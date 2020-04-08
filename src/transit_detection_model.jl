@@ -379,15 +379,15 @@ function calc_ave_prob_detect_if_transit_from_snr_cdpp(t::KeplerTarget, snr_cent
   @assert(num_impact_param_high_b >= 3)
   num_impact_param = num_impact_param_low_b+num_impact_param_high_b-1 # One point is shared
   b_boundary = (size_ratio <= 0.15) ? 2*size_ratio : min(max(0.3,size_ratio),0.5)
-  b = Array{Float64}(num_impact_param)
-  weight = Array{Float64}(num_impact_param)
-  b[1:num_impact_param_low_b] = linspace(0.0,1-b_boundary,num_impact_param_low_b)
-  b[num_impact_param_low_b:num_impact_param] = linspace(1-b_boundary,1.0,num_impact_param_high_b)
-  weight[1:num_impact_param_low_b] = (1-b_boundary)/(num_impact_param_low_b-1)  # Points for first integral
+  b = Array{Float64}(undef,num_impact_param)
+  weight = Array{Float64}(undef,num_impact_param)
+  b[1:num_impact_param_low_b] = range(0.0,stop=1-b_boundary,length=num_impact_param_low_b)
+  b[num_impact_param_low_b:num_impact_param] .= range(1-b_boundary,stop=1.0,length=num_impact_param_high_b)
+  weight[1:num_impact_param_low_b] .= (1-b_boundary)/(num_impact_param_low_b-1)  # Points for first integral
   weight[1] *= 0.5                        # Lower endpoint of first integral
   weight[num_impact_param_low_b] *= 0.5   # Upper endpoint of first integral
   weight[num_impact_param_low_b] += 0.5*(b_boundary)/(num_impact_param_high_b-1) # Also lower endpoint of second integral
-  weight[(num_impact_param_low_b+1):num_impact_param] = b_boundary/(num_impact_param_high_b-1)
+  weight[(num_impact_param_low_b+1):num_impact_param] .= b_boundary/(num_impact_param_high_b-1)
   weight[num_impact_param] *= 0.5         # Upper endpoint of second integral
   @assert isapprox(sum(weight),1.0)
 
