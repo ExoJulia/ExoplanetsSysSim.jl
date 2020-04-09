@@ -374,8 +374,8 @@ function get_durations_searched_Kepler(period::Float64,duration::Float64)
   #determine what maximum and minimum durations were searched for this period
   while min_duration == 0.0 || max_duration == 0.0
     if i > 14
-      println("No durations match this period")
-      return(0.0,0.0)
+      @warn "No duration searched match this period and duration." period duration 
+      return (min_duration > 0.0) ? min_duration/24 : 0.0
     end
     if period <= max_periods[i] && min_duration == 0.0
       min_duration = cdpp_durations[i]
