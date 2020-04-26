@@ -6,15 +6,21 @@
 #if !@isdefined PlanetarySystemAbstract
   @compat abstract type PlanetarySystemAbstract end
 
+  struct SystemPlane
+    incl::Float64 # radians; relative to sky plane
+    asc_node::Float64 # radians; relative to sky plane
+  end
+
   struct PlanetarySystem{StarT<:StarAbstract} <: PlanetarySystemAbstract
     star::StarT
     planet::Vector{Planet}
     orbit::Vector{Orbit}
+    system_plane::SystemPlane
 
       # TODO DETAIL: Setup inner constructor to enforce equal number of planets & orbits
-      function PlanetarySystem{StarT}(s::StarT, p::AbstractVector{Planet}, o::AbstractVector{Orbit}) where {StarT<:StarAbstract}
+      function PlanetarySystem{StarT}(s::StarT, p::AbstractVector{Planet}, o::AbstractVector{Orbit}, sp::SystemPlane) where {StarT<:StarAbstract}
         @assert(length(p)==length(o)) # else error(string("Number of planets must match number of orbits: Np= ",length(p)," No= ",length(o)))
-        new(s,p,o)
+        new(s,p,o,sp)
       end
   end
 
@@ -27,11 +33,15 @@ function PlanetarySystem(s::StarT) where {StarT<:StarAbstract}
 end
 
 function PlanetarySystem(s::StarT, p::Planet, o::Orbit) where {StarT<:StarAbstract}
-   PlanetarySystem(s,[p],[o])  # Constructor for a single Planet System
+   PlanetarySystem(s,[p],[o],SystemPlane(0.,0.))  # Constructor for a single Planet System
 end
 
 function PlanetarySystem(s::StarT, p::AbstractVector{Planet}, o::AbstractVector{Orbit}) where {StarT<:StarAbstract}
-   PlanetarySystem{StarT}(s,p,o)  # Constructor for a single Planet System
+   PlanetarySystem{StarT}(s,p,o,SystemPlane(0.,0.))  # Constructor for a single Planet System
+end
+
+function PlanetarySystem(s::StarT, p::AbstractVector{Planet}, o::AbstractVector{Orbit}, sp::SystemPlane) where {StarT<:StarAbstract}
+    PlanetarySystem{StarT}(s,p,o,sp)
 end
 
 function PlanetarySystem(ps::PlanetarySystem{StarT}, keep::AbstractVector{Int64})  where {StarT<:StarAbstract} # Why doesn't this work?
@@ -65,6 +75,90 @@ function num_planets(s::PlanetarySystem{StarT}) where {StarT<:StarAbstract}
   return length(planets(s))
 end
 
+
+function calc_hill_sphere(a::Float64, mu::Float64)
+    return a*(mu/3)^(1//3)
+end
+
+function calc_mutual_hill_radii(ps::PlanetarySystem{StarT}, pl1::Int64, pl2::Int64) where StarT <: StarAbstract
+    mu = (ps.planet[pl1].mass + ps.planet[pl2].mass)/ps.star.mass
+    a = 0.5*(ps.orbit[pl1].a + ps.orbit[pl2].a)
+    return calc_hill_sphere(a, mu)
+end
+
+function test_stability_circular(P::AbstractVector{Float64}, mass::AbstractVector{Float64}, star_mass::Float64, sim_param::SimParam)
+    @assert length(P) == length(mass)
+    min_num_mutual_hill_radii = get_real(sim_param, "num_mutual_hill_radii")
+    found_instability = false
+    order = sortperm(P)
+    a2 = semimajor_axis(P[order[1]], mass[order[1]]+star_mass)
+    for pl in 1:(length(P)-1)
+        a1 = a2   # semimajor_axis(P[order[pl]], mass[order[pl]]+star_mass)
+        a2 = semimajor_axis(P[order[pl+1]], mass[order[pl+1]]+star_mass)
+        a = 0.5*(a1+a2)
+        mu = (mass[order[pl]] + mass[order[pl+1]])/star_mass
+        mutual_hill_radius = calc_hill_sphere(a, mu)
+        if a2-a1  < min_num_mutual_hill_radii*mutual_hill_radius
+            found_instability = true
+            break
+        end
+    end # loop over neighboring planet pairs within cluster
+    return !found_instability
+end
+
+function test_stability(P::AbstractVector{Float64}, mass::AbstractVector{Float64}, star_mass::Float64, sim_param::SimParam; ecc::AbstractVector{Float64}=zeros(length(P)))
+    @assert length(P) == length(mass) == length(ecc)
+    min_num_mutual_hill_radii = get_real(sim_param, "num_mutual_hill_radii")
+    found_instability = false
+    order = sortperm(P)
+    a2 = semimajor_axis(P[order[1]], mass[order[1]]+star_mass)
+    for pl in 1:(length(P)-1)
+        a1 = a2   # semimajor_axis(P[order[pl]], mass[order[pl]]+star_mass)
+        a2 = semimajor_axis(P[order[pl+1]], mass[order[pl+1]]+star_mass)
+        a = 0.5*(a1+a2)
+        mu = (mass[order[pl]] + mass[order[pl+1]])/star_mass
+        mutual_hill_radius = calc_hill_sphere(a, mu)
+        e1 = ecc[order[pl]]
+        e2 = ecc[order[pl+1]]
+        if a2*(1-e2)-a1*(1+e1) < min_num_mutual_hill_radii*mutual_hill_radius
+            found_instability = true
+            break
+        end
+    end # loop over neighboring planet pairs within cluster
+    return !found_instability
+end
+
+function is_period_ratio_near_resonance(period_ratio::Float64, sim_param::SimParam)
+    resonance_width = get_real(sim_param, "resonance_width")
+    resonance_width_factor = 1+resonance_width
+    period_ratios_to_check = get_any(sim_param, "period_ratios_mmr", Array{Float64,1})
+    result = false
+    for period_ratio_mmr in period_ratios_to_check
+        if period_ratio_mmr <= period_ratio <= period_ratio_mmr*resonance_width_factor
+            result = true
+            break
+        end
+    end
+    return result
+end
+
+function calc_if_near_resonance(P::AbstractVector{Float64}, sim_param::SimParam)
+    @assert issorted(P)   # TODO: OPT: Could remove once know it is safe
+    result = falses(length(P))
+    if length(P) >= 2
+        for i in 1:(length(P)-1)
+            if is_period_ratio_near_resonance(P[i+1]/P[i], sim_param)
+                result[i] = true
+                result[i+1] = true
+            end # near mmr
+        end # planets
+    end # at least two planets
+    return result
+end
+
+
+# Code to generate simple planetary systems.  For more sophisticated algorithms, see clustered model in He et al. 2019
+
 function generate_planet_mass_from_radius_powerlaw(r::Float64, sim_param::SimParam)
   mr_power_index::Float64 = get_real(sim_param,"mr_power_index")
   mr_const::Float64 = get_real(sim_param,"mr_const")
@@ -76,7 +170,7 @@ function generate_planet_mass_from_radius_powerlaw(r::Float64, sim_param::SimPar
   return m
 end
 
-function generate_planet_mass_from_radius_powerlaw(r::Float64, s::Star, o::Orbit, sim_param::SimParam)  # TODO SCI: IMPORTANT once have stability criteria, replace w/ better M-R relationship
+function generate_planet_mass_from_radius_powerlaw(r::Float64, s::Star, o::Orbit, sim_param::SimParam)  # TODO USER SCI: This is importnat if you are using a stability criteria.  In that case, this should be replacde w/ better M-R relationship.  See Matthias's clustered  model for example.
   generate_planet_mass_from_radius_powerlaw(r,sim_param)
 end
 
@@ -88,13 +182,15 @@ function generate_num_planets_poisson(lambda::Real, max_planets::Integer; min_pl
   bug_fixed = false # TODO OPT: true case should work, but Danley found bug in Distributions package.  Revert once fixed for speed.
   local n
   if bug_fixed
-     d = Distributions.Truncated(Distributions.Poisson(lambda),min_planets,max_planets)
+     # d = Distributions.Truncated(Distributions.Poisson(lambda),min_planets,max_planets)
+     d = truncated(Distributions.Poisson(lambda),min_planets,max_planets)
      n = rand(d)
   else
      if min_planets == 0
         min_planets = -1
      end
-     d = Distributions.Truncated(Distributions.Poisson(lambda),min_planets,max_planets)
+     # d = Distributions.Truncated(Distributions.Poisson(lambda),min_planets,max_planets)
+     d = truncated(Distributions.Poisson(lambda),min_planets,max_planets)
      n = rand(d)
      #=
      n = -1
@@ -148,7 +244,7 @@ function generate_period_and_sizes_log_normal(s::Star, sim_param::SimParam; num_
     #Rlist = rand(rdist,num_pl)
     #Plist = rand(Pdist,num_pl)
     #idx_keep = find(i->(min_radius<=Rlist[i]<=max_radius) && (min_period<=Plist[i]<=max_period), 1:num_pl )
-    #return Plist[idx_keep], Rlist[idx_keep]  # replaced because want to return exactly num_pl.  Could use Truncated to restore above code.
+    #return Plist[idx_keep], Rlist[idx_keep]  # replaced because want to return exactly num_pl.  Could use truncated to restore above code.
     Rlist = zeros(num_pl)
     Plist = zeros(num_pl)
     for i in 1:num_pl
@@ -176,7 +272,7 @@ function draw_power_law(n::Real, x0::Real, x1::Real, num_pl::Integer)
     if n != -1
         return ((x1^(n+1) - x0^(n+1)).*rand(num_pl) .+ x0^(n+1)).^(1/(n+1))
     else #if n == -1
-        return exp.(log(x0) .+ rand(num_pl).*log(x1/x0))
+        return x0*(x1/x0).^rand(num_pl)
     end
 end
 
@@ -185,7 +281,7 @@ function draw_power_law!(out::Array, n::Real, x0::Real, x1::Real, num_pl::Intege
     if n != -1
         return out .= ((x1^(n+1) - x0^(n+1)).*rand(num_pl) .+ x0^(n+1)).^(1/(n+1))
     else #if n == -1
-        return out .= exp.(log(x0) .+ rand(num_pl).*log(x1/x0))
+        return out .= x0*(x1/x0).^rand(num_pl)
     end
 end
 
@@ -245,6 +341,16 @@ function generate_periods_power_law(s::Star, sim_param::SimParam; num_pl::Intege
     return Plist
 end
 
+function generate_periods_broken_power_law(s::Star, sim_param::SimParam; num_pl::Integer = 1)
+    power_law_P1::Float64 = get_real(sim_param,"power_law_P1")
+    power_law_P2::Float64 = get_real(sim_param,"power_law_P2")
+    min_period::Float64 = get_real(sim_param,"min_period")
+    max_period::Float64 = get_real(sim_param,"max_period")
+    break_period::Float64 = get_real(sim_param,"break_period")
+    Plist = draw_broken_power_law(power_law_P1,power_law_P2,min_period,max_period,break_period, num_pl)
+    return Plist
+end
+
 function generate_sizes_power_law(s::Star, sim_param::SimParam; num_pl::Integer = 1)
     power_law_r::Float64 = get_real(sim_param,"power_law_r")
     min_radius::Float64 = get_real(sim_param,"min_radius")
@@ -268,6 +374,546 @@ function generate_period_and_sizes_power_law(s::Star, sim_param::SimParam; num_p
 end
 
 
+
+
+
+using SpecialFunctions
+
+cdf_lognormal(x::Float64; μ::Float64=0., σ::Float64=1.) = 0.5*erfc(-(log(x) - μ)/(σ*sqrt(2.)))
+
+function invert_cdf_lognormal(y::Float64; μ::Float64=0., σ::Float64=1.)
+    @assert 0<=y<=1
+    return exp(μ - sqrt(2.)*σ*erfcinv(2*y))
+end
+
+function cdf_power_law(x::Float64; x0::Float64, x1::Float64, α::Float64)
+    @assert x0 <= x <= x1
+    if α != -1
+        return (x^(α+1) - x0^(α+1))/(x1^(α+1) - x0^(α+1))
+    else # if α == -1
+        return log(x/x0)/log(x1/x0)
+    end
+end
+
+function invert_cdf_power_law(y::Float64; x0::Float64, x1::Float64, α::Float64)
+    @assert x0 < x1
+    if α != -1
+        return (x0^(α+1) + (x1^(α+1) - x0^(α+1))*y)^(1/(α+1))
+    else # if α == -1
+        return x0*(x1/x0)^y
+    end
+end
+
+
+
+"""
+    draw_segmented_uniform(segments)
+
+Draw a random uniform variable given segments in the interval (0,1).
+
+# Arguments:
+- `segments::Array{Tuple{Float64,Float64},1}`: array of segments (a,b) between 0 and 1.
+NOTE: all segments must be between [0,1] and be non-overlapping!
+
+# Returns:
+A value (float) contained in one of the given segments, drawn uniformly.
+"""
+function draw_segmented_uniform(segments::Array{Tuple{Float64,Float64},1})
+    # Note: "segments" must be non-overlapping
+    n_segs = length(segments) # number of segments
+    @assert n_segs > 0
+    for (i,seg) in enumerate(segments)
+        @assert 0 <= seg[1] < seg[2] <= 1 # check that all segments are valid
+        if i != n_segs
+            @assert segments[i][2] < segments[i+1][1] # check to make sure there are no overlapping segments
+        end
+    end
+
+    seg_lengths = [seg[2]-seg[1] for seg in segments]
+    sum_lengths = sum(seg_lengths)
+
+    u_draw = rand()
+    for (i,seg) in enumerate(segments)
+        # Map the union of the segments uniformly to the domain [0,1]:
+        sum_l = sum(seg_lengths[1:i-1])
+        if sum_l <= u_draw*sum_lengths < sum_l + seg_lengths[i]
+            return rand(Uniform(seg[1], seg[2]))
+        end
+    end
+end
+
+
+
+"""
+    compute_unstable_regions_periods_given_planets(P, mass, insert_pl_mass, star_mass, sim_param; ecc=zeros(length(P)), insert_pl_ecc=0., use_mutualHill=true, verbose=false)
+
+Compute the unstable intervals in orbital period given the existing planets and the mass and eccentricity of the planet we are trying to insert.
+
+# Arguments:
+- `P::AbstractVector{Float64}`: periods of the existing planets.
+- `mass::AbstractVector{Float64}`: masses of the existing planets.
+- `insert_pl_mass::Float64`: mass of the planet we are trying to insert.
+- `star_mass::Float64`: mass of the star.
+- `sim_param::SimParam`: a SimParam object containing various simulation parameters.
+- `ecc::AbstractVector{Float64}=zeros(length(P))`: eccentricities of the existing planets (defaults to circular).
+- `insert_pl_ecc::Float64=0.`: eccentricity of the planet we are trying to insert (defaults to circular).
+- `use_mutualHill::Bool=true`: whether to use the minimum separation in terms of the mutual Hill radii (default) or the Hill radii (if false).
+- `verbose::Bool=false`: whether to print various messages.
+NOTE: the existing planets do not have to be sorted in period.
+
+# Returns:
+`P_segments_unstable::Array{Tuple{Float64,Float64},1}`: an array of segments. Inserting the planet somewhere inside one of these segments would deem the system unstable.
+
+NOTE: these segments may be overlapping!
+"""
+function compute_unstable_regions_periods_given_planets(P::AbstractVector{Float64}, mass::AbstractVector{Float64}, insert_pl_mass::Float64, star_mass::Float64, sim_param::SimParam; ecc::AbstractVector{Float64}=zeros(length(P)), insert_pl_ecc::Float64=0., use_mutualHill::Bool=true, verbose::Bool=false)
+    @assert length(P) == length(mass) == length(ecc)
+    min_num_mutual_hill_radii = get_real(sim_param, "num_mutual_hill_radii")
+    order = sortperm(P)
+
+    P_segments_unstable = Array{Tuple{Float64,Float64},1}(undef,length(P))
+    for pl in 1:length(P)
+        a = semimajor_axis(P[order[pl]], mass[order[pl]]+star_mass)
+        if use_mutualHill
+            mu = (mass[order[pl]] + insert_pl_mass)/star_mass
+            term = (min_num_mutual_hill_radii/2.)*(mu/3.)^(1//3)
+            a_lower = a*(1. - ecc[order[pl]] - term)/(1. + insert_pl_ecc + term)
+            a_upper = (0 < 1-insert_pl_ecc-term) ? a*(1. + ecc[order[pl]] + term)/(1. - insert_pl_ecc - term) : Inf # 0<(1-insert_pl_ecc-term) must be true or else inequality flips sign and there are no physical solutions for a_upper
+        else # use Hill radii
+            mu = mass[order[pl]]/star_mass
+            hill_radius = calc_hill_sphere(a, mu)
+            a_lower, a_upper = a*(1. - ecc[order[pl]]) - hill_radius*min_num_mutual_hill_radii, a*(1. + ecc[order[pl]]) + hill_radius*min_num_mutual_hill_radii
+        end
+        a_lower = max(a_lower, 0.) # set a_lower=0 if negative
+        @assert 0 <= a_lower < a_upper
+        P_lower, P_upper = period_given_semimajor_axis(a_lower, insert_pl_mass+star_mass), period_given_semimajor_axis(a_upper, insert_pl_mass+star_mass)
+        if verbose
+            println("P_blocked: ", (P_lower, P_upper))
+        end
+        P_segments_unstable[pl] = (P_lower, P_upper)
+    end
+    return P_segments_unstable
+end
+
+
+
+"""
+    compute_unstable_mutualHill_regions_periodscales_given_clusters(pl_per_cl, P_cl, mass_cl, insert_cl_ρ, insert_cl_mass, star_mass, sim_param; ecc_cl=zeros(length(P_cl)), insert_cl_ecc=zeros(length(insert_cl_mass)), verbose=false)
+
+Compute the unstable intervals in period scale given the existing clusters and the cluster we are trying to insert, requiring that no clusters overlap.
+
+# Arguments:
+- `pl_per_cl::Vector{Int64}`: number of planets in each existing cluster.
+- `P_cl::AbstractVector{Float64}`: periods of the planets in the existing clusters.
+- `mass_cl::AbstractVector{Float64}`: masses of the planets in the existing clusters.
+- `insert_cl_ρ::AbstractVector{Float64}`: unscaled periods of the planets in the cluster we are trying to insert.
+- `insert_cl_mass::AbstractVector{Float64}`: masses of the planets in the cluster we are trying to insert.
+- `star_mass::Float64`: mass of the star.
+- `sim_param::SimParam`: a SimParam object containing various simulation parameters.
+- `ecc_cl::AbstractVector{Float64}=zeros(length(P_cl))`: eccentricities of the planets in the existing clusters (defaults to circular).
+- `insert_cl_ecc::AbstractVector{Float64}=zeros(length(insert_cl_mass))`: eccentricities of the planets in the cluster we are trying to insert (defaults to circular).
+- `verbose::Bool=false`: whether to print various messages.
+NOTE: the existing clusters must be grouped (and in the order implied by `pl_per_cl`), but the planets do not have to be sorted in period.
+
+# Returns:
+`Pc_segments_unstable_nonoverlapping::Array{Tuple{Float64,Float64},1}`: an array of (non-overlapping) segments. Inserting the cluster somewhere inside one of these segments would either deem the system unstable, or cause clusters to overlap.
+"""
+function compute_unstable_mutualHill_regions_periodscales_given_clusters(pl_per_cl::Vector{Int64}, P_cl::AbstractVector{Float64}, mass_cl::AbstractVector{Float64}, insert_cl_ρ::AbstractVector{Float64}, insert_cl_mass::AbstractVector{Float64}, star_mass::Float64, sim_param::SimParam; ecc_cl::AbstractVector{Float64}=zeros(length(P_cl)), insert_cl_ecc::AbstractVector{Float64}=zeros(length(insert_cl_mass)), verbose::Bool=false)
+    n_cl = length(pl_per_cl)
+    @assert all(pl_per_cl .> 0)
+    @assert sum(pl_per_cl) == length(P_cl) == length(mass_cl) == length(ecc_cl)
+    @assert length(insert_cl_ρ) == length(insert_cl_mass) == length(insert_cl_ecc)
+    min_num_mutual_hill_radii = get_real(sim_param, "num_mutual_hill_radii")
+
+    # Get the inner-most and outer-most planets in the cluster we are trying to insert:
+    order_insert_cl = sortperm(insert_cl_ρ) # ρ denotes unscaled periods in this function
+    insert_pl_in_ρ, insert_pl_in_mass, insert_pl_in_ecc = insert_cl_ρ[order_insert_cl[1]], insert_cl_mass[order_insert_cl[1]], insert_cl_ecc[order_insert_cl[1]]
+    insert_pl_out_ρ, insert_pl_out_mass, insert_pl_out_ecc = insert_cl_ρ[order_insert_cl[end]], insert_cl_mass[order_insert_cl[end]], insert_cl_ecc[order_insert_cl[end]]
+    max_ratio = insert_pl_out_ρ/insert_pl_in_ρ
+
+    Pc_segments_unstable = Array{Tuple{Float64,Float64},1}(undef,n_cl)
+    pl_start = 1
+    pl_stop = 0
+    for c in 1:n_cl
+        pl_stop += pl_per_cl[c]
+        order = (pl_start - 1) .+ sortperm(P_cl[pl_start:pl_stop])
+
+        # Compare the inner-most planet in this cluster to the outer-most planet in the cluster we are trying to fit in to calculate the lower bound for the unstable region:
+        a_in = semimajor_axis(P_cl[order[1]], mass_cl[order[1]]+star_mass)
+        mu = (mass_cl[order[1]] + insert_pl_out_mass)/star_mass
+        term = (min_num_mutual_hill_radii/2.)*(mu/3.)^(1//3)
+        a_lower = a_in*(1. - ecc_cl[order[1]] - term)/(1. + insert_pl_out_ecc + term)
+        a_lower = max(a_lower, 0.) # set a_lower=0 if negative
+        P_lower = period_given_semimajor_axis(a_lower, insert_pl_out_mass+star_mass)
+
+        # Compare the outer-most planet in this cluster to the inner-most planet in the cluster we are trying to fit in to calculate the upper bound for the unstable region:
+        a_out = semimajor_axis(P_cl[order[end]], mass_cl[order[end]]+star_mass)
+        mu = (mass_cl[order[end]] + insert_pl_in_mass)/star_mass
+        term = (min_num_mutual_hill_radii/2.)*(mu/3.)^(1//3)
+        a_upper = (0 < 1-insert_pl_in_ecc-term) ? a_out*(1. + ecc_cl[order[end]] + term)/(1. - insert_pl_in_ecc - term) : Inf # 0<(1-insert_pl_ecc-term) must be true or else inequality flips sign and there are no physical solutions for a_upper
+        P_upper = period_given_semimajor_axis(a_upper, insert_pl_in_mass+star_mass)
+
+        # Now, convert P_lower and P_upper to bounds for the period scale (which depend on the unscaled periods of the cluster we are trying to insert):
+        Pc_lower, Pc_upper = P_lower/insert_pl_out_ρ, P_upper/insert_pl_in_ρ # Pc_lower should decrease if insert_pl_out_ρ > 1, and likewise Pc_upper should increase if insert_pl_in_ρ < 1
+        if verbose
+            println("Pc_blocked: ", (Pc_lower, Pc_upper))
+        end
+        Pc_segments_unstable[c] = (Pc_lower, Pc_upper)
+
+        pl_start += pl_per_cl[c]
+    end
+    Pc_segments_unstable = sort(Pc_segments_unstable)
+
+    Pc_segments_unstable_nonoverlapping = Tuple{Float64,Float64}[]
+    x_start, x_stop = Pc_segments_unstable[1]
+    for i in 1:length(Pc_segments_unstable)-1
+        if x_stop > Pc_segments_unstable[i+1][1] # segments overlap
+            x_stop = Pc_segments_unstable[i+1][2]
+        else # segments do not overlap
+            if Pc_segments_unstable[i+1][1]/x_stop > max_ratio
+                push!(Pc_segments_unstable_nonoverlapping, (x_start, x_stop))
+                x_start, x_stop = Pc_segments_unstable[i+1]
+            else # segments do not overlap, but there is not enough room between the two segments to insert the cluster
+                x_stop = Pc_segments_unstable[i+1][2]
+            end
+        end
+    end
+    push!(Pc_segments_unstable_nonoverlapping, (x_start, x_stop))
+    if verbose
+        println("Pc_blocked with no room: ", Pc_segments_unstable_nonoverlapping)
+    end
+    return Pc_segments_unstable_nonoverlapping
+end
+
+
+
+"""
+    compute_regions_non_overlapping(segments_blocked)
+
+Compute the non-overlapping segments given an array of (potentially overlapping) segments.
+
+# Arguments:
+- `segments_blocked::Array{Tuple{Float64,Float64},1}`: array of potentially overlapping segments.
+NOTE: the input segments must be sorted in increasing order!
+
+# Returns:
+`segments_blocked_nonoverlapping::Array{Tuple{Float64,Float64},1}`: array of non-overlapping segments.
+"""
+function compute_regions_non_overlapping(segments_blocked::Array{Tuple{Float64,Float64},1})
+    # Make a list of non-overlapping segments:
+    segments_blocked_nonoverlapping = Tuple{Float64,Float64}[]
+    x_start, x_stop = segments_blocked[1]
+    for i in 1:length(segments_blocked)-1
+        if x_stop > segments_blocked[i+1][1] # segments overlap
+            x_stop = segments_blocked[i+1][2]
+        else # segments do not overlap
+            push!(segments_blocked_nonoverlapping, (x_start, x_stop))
+            x_start, x_stop = segments_blocked[i+1]
+        end
+    end
+    push!(segments_blocked_nonoverlapping, (x_start, x_stop))
+    return segments_blocked_nonoverlapping
+end
+
+
+
+"""
+    compute_allowed_regions_cdf_lognormal(segments_blocked; μ=0., σ=1., x_min=0., x_max=Inf, ϵ=1e-12)
+
+Compute the allowed regions in the cumulative distribution function (CDF) of a lognormal distribution, given blocked segments in the domain of the variable.
+
+# Arguments:
+- `segments_blocked::Array{Tuple{Float64,Float64},1}`: array of blocked segments.
+- `μ::Float64=0.`: mean parameter for the lognormal distribution.
+- `σ::Float64=1.`: standard deviation parameter for the lognormal distribution.
+- `x_min::Float64=0.`: minimum value of the variable.
+- `x_max::Float64=Inf`: maximum value of the variable.
+- `ϵ::Float64=1e-12`: minimum segment length in CDF to be included as an allowed segment, to reduce the rate of error due to machine precision.
+NOTE: the array of blocked segments do not have to be non-overlapping; this function will first compute the non-overlapping segments.
+
+# Returns:
+`cdf_segments_allowed::Array{Tuple{Float64,Float64},1}`: array of (non-overlapping) segments in the CDF that are not blocked.
+
+NOTE: returns an empty array (length zero) if the entire domain between `x_min` and `x_max` is blocked!
+"""
+function compute_allowed_regions_cdf_lognormal(segments_blocked::Array{Tuple{Float64,Float64},1}; μ::Float64=0., σ::Float64=1., x_min::Float64=0., x_max::Float64=Inf, ϵ::Float64=1e-12)
+    @assert 0 <= x_min < x_max <= Inf
+
+    # Make a list of non-overlapping segments in period deemed unstable:
+    segments_blocked_nonoverlapping = compute_regions_non_overlapping(segments_blocked)
+
+    # Make a list of non-overlapping, allowed segments in the cdf:
+    cdf_segments_allowed = Tuple{Float64,Float64}[]
+    n_seg_max = length(segments_blocked_nonoverlapping)+1 # maximum number of allowed segments if all the unstable segments fit between x_min and x_max
+    for i in 1:n_seg_max
+        if i==1 && x_min < segments_blocked_nonoverlapping[i][1]
+            cdf_start = cdf_lognormal(x_min; μ=μ, σ=σ)
+            cdf_stop = cdf_lognormal(segments_blocked_nonoverlapping[i][1]; μ=μ, σ=σ)
+            if cdf_stop - cdf_start > ϵ
+                push!(cdf_segments_allowed, (cdf_start, cdf_stop))
+            end
+        elseif i==n_seg_max && x_max > segments_blocked_nonoverlapping[i-1][2]
+            cdf_start = cdf_lognormal(segments_blocked_nonoverlapping[i-1][2]; μ=μ, σ=σ)
+            cdf_stop = cdf_lognormal(x_max; μ=μ, σ=σ)
+            if cdf_stop - cdf_start > ϵ
+                push!(cdf_segments_allowed, (cdf_start, cdf_stop))
+            end
+        elseif 1 < i < n_seg_max
+            cdf_start = cdf_lognormal(segments_blocked_nonoverlapping[i-1][2]; μ=μ, σ=σ)
+            cdf_stop = cdf_lognormal(segments_blocked_nonoverlapping[i][1]; μ=μ, σ=σ)
+            if cdf_stop - cdf_start > ϵ
+                push!(cdf_segments_allowed, (cdf_start, cdf_stop))
+            end
+        end
+    end
+
+    return cdf_segments_allowed
+end
+
+
+
+"""
+    compute_allowed_regions_cdf_power_law(segments_blocked; x0, x1, α, ϵ=1e-12)
+
+Compute the allowed regions in the cumulative distribution function (CDF) of a power-law distribution, given blocked segments in the domain of the variable.
+
+# Arguments:
+- `segments_blocked::Array{Tuple{Float64,Float64},1}`: array of blocked segments.
+- `x0::Float64`: minimum value of the variable.
+- `x1::Float64`: maximum value of the variable.
+- `α::Float64`: power-law index.
+- `ϵ::Float64=1e-12`: minimum segment length in CDF to be included as an allowed segment, to reduce the rate of error due to machine precision.
+NOTE: the array of blocked segments do not have to be non-overlapping; this function will first compute the non-overlapping segments.
+
+# Returns:
+`cdf_segments_allowed::Array{Tuple{Float64,Float64},1}`: array of (non-overlapping) segments in the CDF that are not blocked.
+
+NOTE: returns an empty array (length zero) if the entire domain between `x0` and `x1` is blocked!
+"""
+function compute_allowed_regions_cdf_power_law(segments_blocked::Array{Tuple{Float64,Float64},1}; x0::Float64, x1::Float64, α::Float64, ϵ::Float64=1e-12)
+    @assert x0 < x1
+
+    # Make a list of non-overlapping segments in period scale deemed unstable:
+    segments_blocked_nonoverlapping = compute_regions_non_overlapping(segments_blocked)
+
+    # Make a list of non-overlapping, allowed segments in the cdf:
+    cdf_segments_allowed = Tuple{Float64,Float64}[]
+    n_seg_max = length(segments_blocked_nonoverlapping)+1 # maximum number of allowed segments if all the unstable segments fit between x0 and x1
+    for i in 1:n_seg_max
+        if i==1 && x0 < segments_blocked_nonoverlapping[i][1]
+            cdf_start = 0.
+            cdf_stop = cdf_power_law(segments_blocked_nonoverlapping[i][1]; x0=x0, x1=x1, α=α)
+            if cdf_stop - cdf_start > ϵ
+                push!(cdf_segments_allowed, (cdf_start, cdf_stop))
+            end
+        elseif i==n_seg_max && x1 > segments_blocked_nonoverlapping[i-1][2]
+            cdf_start = cdf_power_law(segments_blocked_nonoverlapping[i-1][2]; x0=x0, x1=x1, α=α)
+            cdf_stop = 1.
+            if cdf_stop - cdf_start > ϵ
+                push!(cdf_segments_allowed, (cdf_start, cdf_stop))
+            end
+        elseif 1 < i < n_seg_max
+            cdf_start = cdf_power_law(segments_blocked_nonoverlapping[i-1][2]; x0=x0, x1=x1, α=α)
+            cdf_stop = cdf_power_law(segments_blocked_nonoverlapping[i][1]; x0=x0, x1=x1, α=α)
+            if cdf_stop - cdf_start > ϵ
+                push!(cdf_segments_allowed, (cdf_start, cdf_stop))
+            end
+        end
+    end
+
+    return cdf_segments_allowed
+end
+
+
+
+"""
+    draw_lognormal_allowed_regions(segments_blocked; μ=0., σ=1., x_min=0., x_max=Inf, ϵ=1e-12, verbose=false)
+
+Draw a random value that is not inside a blocked region, from a lognormal distribution.
+
+# Arguments:
+- `segments_blocked::Array{Tuple{Float64,Float64},1}`: array of blocked segments.
+- `μ::Float64=0.`: mean parameter for the lognormal distribution.
+- `σ::Float64=1.`: standard deviation parameter for the lognormal distribution.
+- `x_min::Float64=0.`: minimum value of the variable.
+- `x_max::Float64=Inf`: maximum value of the variable.
+- `ϵ::Float64=1e-12`: minimum segment length in CDF to be included as an allowed segment, to reduce the rate of error due to machine precision.
+- `verbose::Bool=false`: whether to print various messages.
+NOTE: the array of blocked segments do not have to be non-overlapping.
+
+# Returns:
+A value (float) drawn from the lognormal distribution, that is not inside a blocked region.
+
+NOTE: returns NaN if the entire region between `x_min` and `x_max` is blocked!
+"""
+function draw_lognormal_allowed_regions(segments_blocked::Array{Tuple{Float64,Float64},1}; μ::Float64=0., σ::Float64=1., x_min::Float64=0., x_max::Float64=Inf, ϵ::Float64=1e-12, verbose::Bool=false)
+    cdf_segments_allowed = compute_allowed_regions_cdf_lognormal(segments_blocked; μ=μ, σ=σ, x_min=x_min, x_max=x_max, ϵ=ϵ)
+    if length(cdf_segments_allowed) == 0
+        if verbose
+            println("No allowed regions left to draw from; returning NaN.")
+        end
+        return NaN
+    else
+        y = draw_segmented_uniform(cdf_segments_allowed)
+        return invert_cdf_lognormal(y; μ=μ, σ=σ)
+    end
+end
+
+
+
+"""
+    draw_power_law_allowed_regions(segments_blocked; x0, x1, α, ϵ=1e-12, verbose=false)
+
+Draw a random value that is not inside a blocked region, from a power-law distribution.
+
+# Arguments:
+- `segments_blocked::Array{Tuple{Float64,Float64},1}`: array of blocked segments.
+- `x0::Float64`: minimum value of the variable.
+- `x1::Float64`: maximum value of the variable.
+- `α::Float64`: power-law index.
+- `ϵ::Float64=1e-12`: minimum segment length in CDF to be included as an allowed segment, to reduce the rate of error due to machine precision.
+- `verbose::Bool=false`: whether to print various messages.
+NOTE: the array of blocked segments do not have to be non-overlapping.
+
+# Returns:
+A value (float) drawn from the power-law distribution, that is not inside a blocked region.
+
+NOTE: returns NaN if the entire region between `x0` and `x1` is blocked!
+"""
+function draw_power_law_allowed_regions(segments_blocked::Array{Tuple{Float64,Float64},1}; x0::Float64, x1::Float64, α::Float64, ϵ::Float64=1e-12, verbose::Bool=false)
+    cdf_segments_allowed = compute_allowed_regions_cdf_power_law(segments_blocked; x0=x0, x1=x1, α=α, ϵ=ϵ)
+    if length(cdf_segments_allowed) == 0
+        if verbose
+            println("No allowed regions left to draw from; returning NaN.")
+        end
+        return NaN
+    else
+        y = draw_segmented_uniform(cdf_segments_allowed)
+        return invert_cdf_power_law(y; x0=x0, x1=x1, α=α)
+    end
+end
+
+
+
+"""
+    draw_period_lognormal_allowed_regions(P, mass, insert_pl_mass, star_mass, sim_param; μ=0., σ=1., x_min=0., x_max=Inf, ecc=zeros(length(P)), insert_pl_ecc=0., use_mutualHill=true, ϵ=1e-12, verbose=false)
+
+Draw a period from a lognormal distribution, that would allow the system to be stable if the planet is inserted there.
+
+# Arguments:
+- `P::AbstractVector{Float64}`: periods of the existing planets.
+- `mass::AbstractVector{Float64}`: masses of the existing planets.
+- `insert_pl_mass::Float64`: mass of the planet we are trying to insert.
+- `star_mass::Float64`: mass of the star.
+- `sim_param::SimParam`: a SimParam object containing various simulation parameters.
+- `μ::Float64=0.`: mean parameter for the lognormal distribution.
+- `σ::Float64=1.`: standard deviation parameter for the lognormal distribution.
+- `x_min::Float64=0.`: minimum value of the variable.
+- `x_max::Float64=Inf`: maximum value of the variable.
+- `ecc::AbstractVector{Float64}=zeros(length(P))`: eccentricities of the existing planets (defaults to circular).
+- `insert_pl_ecc::Float64=0.`: eccentricity of the planet we are trying to insert (defaults to circular).
+- `use_mutualHill::Bool=true`: whether to use the minimum separation in terms of the mutual Hill radii (default) or the Hill radii (if false).
+- `ϵ::Float64=1e-12`: minimum segment length in CDF to be included as an allowed segment, to reduce the rate of error due to machine precision.
+- `verbose::Bool=false`: whether to print various messages.
+NOTE: the existing planets do not have to be sorted in period.
+
+# Returns:
+`P_draw::Float64`: period drawn from the lognormal distribution, that would allow the system to be stable if the planet is inserted there.
+
+NOTE: returns NaN if any period between `x_min` and `x_max` would make the system unstable!
+"""
+function draw_period_lognormal_allowed_regions(P::AbstractVector{Float64}, mass::AbstractVector{Float64}, insert_pl_mass::Float64, star_mass::Float64, sim_param::SimParam; μ::Float64=0., σ::Float64=1., x_min::Float64=0., x_max::Float64=Inf, ecc::AbstractVector{Float64}=zeros(length(P)), insert_pl_ecc::Float64=0., use_mutualHill::Bool=true, ϵ::Float64=1e-12, verbose::Bool=false)
+    @assert length(P) == length(mass) == length(ecc)
+    @assert 0 <= insert_pl_mass < star_mass
+    @assert all(P .> 0)
+    @assert all(mass .>= 0)
+    @assert all(1 .> ecc .>= 0)
+    @assert 0 <= insert_pl_ecc < 1
+
+    if length(P) > 0
+        P_segments_unstable = compute_unstable_regions_periods_given_planets(P, mass, insert_pl_mass, star_mass, sim_param; ecc=ecc, insert_pl_ecc=insert_pl_ecc, use_mutualHill=use_mutualHill, verbose=verbose)
+        P_draw = draw_lognormal_allowed_regions(P_segments_unstable; μ=μ, σ=σ, x_min=x_min, x_max=x_max, ϵ=ϵ, verbose=verbose)
+    else
+        P_draw = invert_cdf_lognormal(rand(Uniform(cdf_lognormal(x_min; μ=μ, σ=σ), cdf_lognormal(x_max; μ=μ, σ=σ))); μ=μ, σ=σ)
+    end
+    return P_draw
+end
+
+
+
+"""
+    draw_period_lognormal_allowed_regions_Hill(P, mass, insert_pl_mass, star_mass, sim_param; μ=0., σ=1., x_min=0., x_max=Inf, ecc=zeros(length(P)), insert_pl_ecc=0., ϵ=1e-12, verbose=false)
+
+Draw a period that is not inside a blocked region using Hill radii, from a lognormal distribution, by calling `draw_period_lognormal_allowed_regions`.
+
+NOTE: returns NaN if any period between `x_min` and `x_max` would make the system unstable!
+"""
+draw_period_lognormal_allowed_regions_Hill(P::AbstractVector{Float64}, mass::AbstractVector{Float64}, insert_pl_mass::Float64, star_mass::Float64, sim_param::SimParam; μ::Float64=0., σ::Float64=1., x_min::Float64=0., x_max::Float64=Inf, ecc::AbstractVector{Float64}=zeros(length(P)), insert_pl_ecc::Float64=0., ϵ::Float64=1e-12, verbose::Bool=false) = draw_period_lognormal_allowed_regions(P, mass, insert_pl_mass, star_mass, sim_param; μ=μ, σ=σ, x_min=x_min, x_max=x_max, ecc=ecc, insert_pl_ecc=insert_pl_ecc, use_mutualHill=false, ϵ=ϵ, verbose=verbose)
+
+"""
+    draw_period_lognormal_allowed_regions_mutualHill(P, mass, insert_pl_mass, star_mass, sim_param; μ=0., σ=1., x_min=0., x_max:=Inf, ecc=zeros(length(P)), insert_pl_ecc=0., ϵ=1e-12, verbose=false)
+
+Draw a period that is not inside a blocked region using mutual Hill radii, from a lognormal distribution, by calling `draw_period_lognormal_allowed_regions`.
+
+NOTE: returns NaN if any period between `x_min` and `x_max` would make the system unstable!
+"""
+draw_period_lognormal_allowed_regions_mutualHill(P::AbstractVector{Float64}, mass::AbstractVector{Float64}, insert_pl_mass::Float64, star_mass::Float64, sim_param::SimParam; μ::Float64=0., σ::Float64=1., x_min::Float64=0., x_max::Float64=Inf, ecc::AbstractVector{Float64}=zeros(length(P)), insert_pl_ecc::Float64=0., ϵ::Float64=1e-12, verbose::Bool=false) = draw_period_lognormal_allowed_regions(P, mass, insert_pl_mass, star_mass, sim_param; μ=μ, σ=σ, x_min=x_min, x_max=x_max, ecc=ecc, insert_pl_ecc=insert_pl_ecc, use_mutualHill=true, ϵ=ϵ, verbose=verbose)
+
+
+
+"""
+    draw_periodscale_power_law_allowed_regions_mutualHill(pl_per_cl, P_cl:, mass_cl:, insert_cl_ρ, insert_cl_mass, star_mass, sim_param; x0, x1, α, ecc_cl=zeros(length(P_cl)), insert_cl_ecc=zeros(length(insert_cl_mass)), ϵ=1e-12, verbose=false)
+
+Draw a period scale from a power-law distribution, that would allow the system to be stable if the cluster is inserted there (and cause no overlapping clusters).
+
+# Arguments:
+- `pl_per_cl::Vector{Int64}`: number of planets in each existing cluster.
+- `P_cl::AbstractVector{Float64}`: periods of the planets in the existing clusters.
+- `mass_cl::AbstractVector{Float64}`: masses of the planets in the existing clusters.
+- `insert_cl_ρ::AbstractVector{Float64}`: unscaled periods of the planets in the cluster we are trying to insert.
+- `insert_cl_mass::AbstractVector{Float64}`: masses of the planets in the cluster we are trying to insert.
+- `star_mass::Float64`: mass of the star.
+- `sim_param::SimParam`: a SimParam object containing various simulation parameters.
+- `x0::Float64`: minimum value of the variable.
+- `x1::Float64`: maximum value of the variable.
+- `α::Float64`: power-law index.
+- `ecc_cl::AbstractVector{Float64}=zeros(length(P_cl))`: eccentricities of the planets in the existing clusters (defaults to circular).
+- `insert_cl_ecc::AbstractVector{Float64}=zeros(length(insert_cl_mass))`: eccentricities of the planets in the cluster we are trying to insert (defaults to circular).
+- `ϵ::Float64=1e-12`: minimum segment length in CDF to be included as an allowed segment, to reduce the rate of error due to machine precision.
+- `verbose::Bool=false`: whether to print various messages.
+NOTE: the existing clusters must be grouped (and in the order implied by `pl_per_cl`), but the planets do not have to be sorted in period.
+
+# Returns:
+`Pc_draw::Float64`: period scale drawn from the power-law distribution, that would allow the system to be stable if the cluster is inserted there.
+
+NOTE: returns NaN if any period scale between `x0` and `x1` would make the system unstable or cause clusters to overlap!
+"""
+function draw_periodscale_power_law_allowed_regions_mutualHill(pl_per_cl::Vector{Int64}, P_cl::AbstractVector{Float64}, mass_cl::AbstractVector{Float64}, insert_cl_ρ::AbstractVector{Float64}, insert_cl_mass::AbstractVector{Float64}, star_mass::Float64, sim_param::SimParam; x0::Float64, x1::Float64, α::Float64, ecc_cl::AbstractVector{Float64}=zeros(length(P_cl)), insert_cl_ecc::AbstractVector{Float64}=zeros(length(insert_cl_mass)), ϵ::Float64=1e-12, verbose::Bool=false)
+    @assert x0 < x1
+    @assert sum(pl_per_cl) == length(P_cl) == length(mass_cl) == length(ecc_cl)
+    @assert all(P_cl .> 0)
+    @assert all(mass_cl .> 0)
+    @assert all(0 .<= ecc_cl .< 1)
+    @assert length(insert_cl_ρ) == length(insert_cl_mass) == length(insert_cl_ecc)
+    @assert all(0 .< insert_cl_ρ)
+    @assert all(0 .< insert_cl_mass .< star_mass)
+    @assert all(0 .<= insert_cl_ecc .< 1)
+
+    if length(P_cl) > 0
+        Pc_segments_unstable = compute_unstable_mutualHill_regions_periodscales_given_clusters(pl_per_cl, P_cl, mass_cl, insert_cl_ρ, insert_cl_mass, star_mass, sim_param; ecc_cl=ecc_cl, insert_cl_ecc=insert_cl_ecc, verbose=verbose)
+        Pc_draw = draw_power_law_allowed_regions(Pc_segments_unstable; x0=x0, x1=x1, α=α, ϵ=ϵ, verbose=verbose)
+    else
+        Pc_draw = invert_cdf_power_law(rand(); x0=x0, x1=x1, α=α)
+    end
+    return Pc_draw
+end
+
+
+
+
+
+#=
+# Removed now that Truncated is deprecated in favor of truncated
 function TruncatedUpper(d::Distributions.UnivariateDistribution, u::Float64)
     zero(u) < u || error("lower bound should be less than upper bound.")
     lcdf = zero(u)
@@ -275,11 +921,12 @@ function TruncatedUpper(d::Distributions.UnivariateDistribution, u::Float64)
     tp = ucdf - lcdf
     Distributions.Truncated{typeof(d),Distributions.value_support(typeof(d))}(d, zero(u), u, lcdf, ucdf, tp, log(tp))
 end
-
+=#
 
 function generate_e_omega_rayleigh_direct(sigma_hk::Float64; max_e::Float64 = 1.0)
   @assert(0<max_e<=1.0)
-  ecc::Float64 = rand( TruncatedUpper(Rayleigh(sigma_hk),max_e) )
+  # ecc::Float64 = rand( TruncatedUpper(Rayleigh(sigma_hk),max_e) )
+  ecc::Float64 = rand( truncated(Rayleigh(sigma_hk),zero(sigma_hk),max_e) )
   w::Float64 = 2pi*rand()
   return ecc, w
 end
@@ -308,6 +955,35 @@ end
 function generate_e_omega_rayleigh(sim_param::SimParam; max_e::Float64 = 1.0)
   sigma_hk::Float64 = get_real(sim_param,"sigma_hk")
   generate_e_omega_rayleigh(sigma_hk, max_e=max_e)
+end
+
+
+
+struct ParamsTriangle
+    id_xy::Tuple{Int64,Int64} # indices of the two transformed parameters in a vector of parameters
+    # A,B,C are vertices of the triangle for parameters (x,y), in no particular order
+    A::Tuple{Float64,Float64}
+    B::Tuple{Float64,Float64}
+    C::Tuple{Float64,Float64}
+end
+
+"""
+    map_square_to_triangle(r1, r2, pt)
+
+Map a point (r1, r2) in the unit square to a point P=(x,y) in the triangle defined by vertices A,B,C. If r1,r2 are uniformly drawn in [0,1], then the point P is also uniformly drawn in the triangle; see http://www.cs.princeton.edu/~funk/tog02.pdf (Section 4.2) for a reference.
+
+# Arguments:
+- `r1r2::Tuple{Float64,Float64}`: a point in the unit square representing two transformed parameters.
+- `pt::ParamsTriangle`: an object containing the indices of the two transformed parameters and vertices of the triangle defining the bounds for the two parameters.
+
+# Returns:
+- `P::Tuple{Float64,Float64}`: a point for the two parameters in the triangle corresponding to the point given by `r1r2` in the unit square.
+"""
+function map_square_to_triangle(r1r2::Tuple{Float64,Float64}, pt::ParamsTriangle)
+    @assert all(0 .<= r1r2 .<= 1)
+    r1, r2 = r1r2
+    P = (1. - sqrt(r1)) .* pt.A .+ (sqrt(r1)*(1. - r2)) .* pt.B .+ (sqrt(r1)*r2) .* pt.C
+    return P
 end
 
 function generate_planetary_system_hardcoded_example(star::StarAbstract, sim_param::SimParam; verbose::Bool = false)
@@ -363,6 +1039,10 @@ function generate_planetary_system_hardcoded_example(star::StarAbstract, sim_par
     end
   return PlanetarySystem(star,pl,orbit)
   end
+end
+
+function generate_planetary_system_empty(star::StarAbstract, sim_param::SimParam; verbose::Bool = false)
+    return PlanetarySystem(star)::PlanetarySystem
 end
 
 function generate_planetary_system_uncorrelated_incl(star::StarAbstract, sim_param::SimParam; verbose::Bool = false)

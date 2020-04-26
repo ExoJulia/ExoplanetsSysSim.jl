@@ -6,8 +6,9 @@
  const num_modules = 42
  const num_quarters = 17              # QUERY:  I'm favoring leaving out quarter 0, since that was engineering data.  Agree?
  const cdpp_durations = [1.5,2.,2.5,3.,3.5,4.5,5.,6.,7.5,9.,10.5,12.,12.5,15.]
+ const duration_symbols = [:rrmscdpp01p5, :rrmscdpp02p0,:rrmscdpp02p5,:rrmscdpp03p0,:rrmscdpp03p5,:rrmscdpp04p5,:rrmscdpp05p0,:rrmscdpp06p0,:rrmscdpp07p5,:rrmscdpp09p0,:rrmscdpp10p5,:rrmscdpp12p0,:rrmscdpp12p5,:rrmscdpp15p0 ]
  const num_cdpp_timescales = 14
- @assert num_cdpp_timescales == length(cdpp_durations) 
+ @assert num_cdpp_timescales == length(cdpp_durations) == length(duration_symbols)
  const mission_data_span = 1459.789   # maximum(ExoplanetsSysSim.StellarTable.df[:dataspan])
  const mission_duty_cycle = 0.8751    # median(ExoplanetsSysSim.StellarTable.df[:dutycycle])
 
