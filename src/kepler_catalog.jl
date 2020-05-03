@@ -151,34 +151,24 @@ function read_koi_catalog(filename::String, force_reread::Bool = false)
         end
     else
        try
-            tmp_koi_cat = readlines(filename)
-            tmp_ind = 1
-            num_skip = 1
-            while tmp_koi_cat[tmp_ind][1] == '#'
-                num_skip += 1
-                tmp_ind += 1
-            end
-
-            #df = readtable(filename, skipstart=num_skip)
-            #df = CSV.read(filename,nullable=true, header=num_skip, rows_for_type_detect = size(tmp_koi_cat,1)-num_skip )
-            df = CSV.read(filename,allowmissing=:all, header=num_skip, rows_for_type_detect = size(tmp_koi_cat,1)-num_skip )
+            df = CSV.read(filename,comment="#")
 
             # Choose which KOIs to keep
-            #is_cand = (csv_data[:,koi_disposition_idx] .== "CONFIRMED") | (csv_data[:,koi_disposition_idx] .== "CANDIDATE")
-            is_cand = df[:koi_pdisposition] .== "CANDIDATE"
-            has_radius = .!ismissing.(df[:koi_ror])
-            has_period = .!(ismissing.(df[:koi_period]) .| ismissing.(df[:koi_period_err1]) .| ismissing.(df[:koi_period_err2]))
+            #is_cand = (csv_data[!,:,koi_disposition_idx] .== "CONFIRMED") | (csv_data[!,:,koi_disposition_idx] .== "CANDIDATE")
+            is_cand = df[!,:koi_pdisposition] .== "CANDIDATE"
+            has_radius = .!ismissing.(df[!,:koi_ror])
+            has_period = .!(ismissing.(df[!,:koi_period]) .| ismissing.(df[!,:koi_period_err1]) .| ismissing.(df[!,:koi_period_err2]))
 
             is_usable = .&(is_cand, has_radius, has_period)
             usable = findall(is_usable)
-           #  symbols_to_keep = [:kepid, :kepoi_name, :koi_pdisposition, :koi_score, :koi_ror, :koi_period, :koi_period_err1, :koi_period_err2, :koi_time0bk, :koi_time0bk_err1, :koi_time0bk_err2, :koi_depth, :koi_depth_err1, :koi_depth_err2, :koi_duration, :koi_duration_err1, :koi_duration_err2]
+           #  symbols_to_keep = [!,:kepid, :kepoi_name, :koi_pdisposition, :koi_score, :koi_ror, :koi_period, :koi_period_err1, :koi_period_err2, :koi_time0bk, :koi_time0bk_err1, :koi_time0bk_err2, :koi_depth, :koi_depth_err1, :koi_depth_err2, :koi_duration, :koi_duration_err1, :koi_duration_err2]
            # df = df[usable, symbols_to_keep]
            # tmp_df = DataFrame()
            # for col in names(df)
            #     tmp_df[col] = collect(skipmissing(df[col]))
            # end
            # df = tmp_df
-           # usable = collect(1:length(df[:kepid]))
+           # usable = collect(1:length(df[!,:kepid]))
         catch
             error(string("# Failed to read koi catalog >",filename,"< in ascii format."))
         end
@@ -192,11 +182,11 @@ function setup_actual_planet_candidate_catalog(df_star::DataFrame, df_koi::DataF
     df_koi = df_koi[usable_koi,:]
 
     if haskey(sim_param, "koi_subset_csv")
-        koi_subset = fill(false, length(df_koi[:kepid]))
+        koi_subset = fill(false, length(df_koi[!,:kepid]))
 
         subset_df = readtable(convert(String,get(sim_param,"koi_subset_csv", "christiansen_kov.csv")), header=true, separator=' ')
 
-        for n in 1:length(subset_df[:,1])
+        for n in 1:length(subset_df[!,1])
             subset_colnum = 1
             subset_entry = findall(x->x==subset_df[n,1], df_koi[names(subset_df)[1]])
             # println("Initial cut: ", subset_entry)
@@ -230,24 +220,24 @@ function setup_actual_planet_candidate_catalog(df_star::DataFrame, df_koi::DataF
     df_obs = sort!(df_obs, (:kepid))
 
     if haskey(sim_param, "koi_subset_csv")
-        tot_plan -= length(df_obs[:kepoi_name])
+        tot_plan -= length(df_obs[!,:kepoi_name])
         println("# Number of planet candidates in subset file with no matching star in table: ", tot_plan)
     end
 
     plid = 0
-    for i in 1:length(df_obs[:kepoi_name])
+    for i in 1:length(df_obs[!,:kepoi_name])
         if plid == 0
             plid = 1
-            while i+plid < length(df_obs[:kepoi_name]) && df_obs[i+plid,:kepid] == df_obs[i,:kepid]
+            while i+plid < length(df_obs[!,:kepoi_name]) && df_obs[i+plid,:kepid] == df_obs[i,:kepid]
                 plid += 1
             end
             num_pl = plid
             target_obs = KeplerTargetObs(num_pl)
-	        #target_obs.star = ExoplanetsSysSim.StarObs(df_obs[i,:radius],df_obs[i,:mass],findfirst(df_star[:kepid], df_obs[i,:kepid]))
-            star_idx = searchsortedfirst(df_star[:kepid],df_obs[i,:kepid])
-            if star_idx > length(df_star[:kepid])
+	        #target_obs.star = ExoplanetsSysSim.StarObs(df_obs[i,:radius],df_obs[i,:mass],findfirst(df_star[!,:kepid], df_obs[i,:kepid]))
+            star_idx = searchsortedfirst(df_star[!,:kepid],df_obs[i,:kepid])
+            if star_idx > length(df_star[!,:kepid])
                 @warn "# Couldn't find kepid " * df_star[i,:kepid] * " in df_obs."
-                star_idx = rand(1:length(df_star[:kepid]))
+                star_idx = rand(1:length(df_star[!,:kepid]))
             end
             target_obs.star = ExoplanetsSysSim.StarObs(df_obs[i,:radius],df_obs[i,:mass],star_idx)
 
