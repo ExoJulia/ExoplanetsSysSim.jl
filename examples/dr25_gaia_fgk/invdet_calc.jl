@@ -5,14 +5,14 @@
 #    Bayesian methods
 
 using ExoplanetsSysSim
-include(joinpath(Pkg.dir(),"ExoplanetsSysSim","examples","dr25_gaia_fgk", "christiansen_func.jl"))
+include(joinpath(abspath(joinpath(dirname(Base.find_package("ExoplanetsSysSim")),"..")),"examples","dr25_gaia_fgk", "dr25_binrates_func.jl"))
 
-global sim_param_closure = setup_sim_param_christiansen()
+global sim_param_closure = setup_sim_param_dr25binrates()
 sim_param_closure = set_test_param(sim_param_closure)
 
 df_koi,usable_koi = read_koi_catalog(sim_param_closure)
 println("# Finished reading in KOI data")
-df_star = setup_star_table_christiansen(sim_param_closure)
+df_star = setup_star_table_dr25(sim_param_closure)
 println("# Finished reading in stellar data") 
 cat_obs = setup_actual_planet_candidate_catalog(df_star, df_koi, usable_koi, sim_param_closure)
 
