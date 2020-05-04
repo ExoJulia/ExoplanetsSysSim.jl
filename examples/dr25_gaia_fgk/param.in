@@ -10,10 +10,10 @@ osd_file = "inputs\\dr25fgk_relaxcut_osds.jld2"
 num_targ_sim = 1000                       # number of planetary systems in simulated catalogs 
                                              # [DEFAULT = same size as observed catalog]
 
-#p_bin_lim = [237., 500.]                     # bin boundaries for orbital period (days) [NO DEFAULT VALUE]
-#r_bin_lim = [0.5, 0.75, 1., 1.25, 1.5, 1.75]                       # bin boundaries for planet radius (R_earth) [NO DEFAULT VALUE]
-p_bin_lim = [0.5, 1., 2., 4., 8., 16., 32., 64., 128., 256., 500.]
-r_bin_lim = [0.5, 0.75, 1., 1.25, 1.5, 1.75, 2., 2.5, 3., 4., 6., 8., 12., 16.]
+p_bin_lim = [237., 500.]                     # bin boundaries for orbital period (days) [NO DEFAULT VALUE]
+r_bin_lim = [0.5, 0.75, 1., 1.25, 1.5, 1.75]                       # bin boundaries for planet radius (R_earth) [NO DEFAULT VALUE]
+#p_bin_lim = [0.5, 1., 2., 4., 8., 16., 32., 64., 128., 256., 500.]
+#r_bin_lim = [0.5, 0.75, 1., 1.25, 1.5, 1.75, 2., 2.5, 3., 4., 6., 8., 12., 16.]
 
 #rate_init = 1.0                             # initial guess for occurrence rates (percent) [DEFAULT = 1.0 for all bins]
                                              # can be single rate (applied to all bins) or array of rates 
