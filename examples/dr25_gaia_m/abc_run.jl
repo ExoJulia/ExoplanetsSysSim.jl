@@ -4,7 +4,7 @@
 
 include("abc_setup.jl")
 
-using SysSimABC
+#using SysSimABC
 using ExoplanetsSysSim
 using JLD
 using StatsBase
@@ -13,29 +13,28 @@ out2txt = false # Write occurrence rates & densities to text files
 expandpart = false # Expand final generation for robust posteriors
 prior_choice = "dirichlet"
 bin_size_factor = 2.0
-pop_num = 1
 
 println("Setting up simulation...")
-@time abc_plan = setup_abc(prior_choice = prior_choice, bin_size_factor = bin_size_factor)
+@time abc_plan = SysSimABC.setup_abc(prior_choice = prior_choice, bin_size_factor = bin_size_factor)
 println("")
 println("Running simulation...")
-@time output = run_abc(abc_plan)
+@time output = SysSimABC.run_abc(abc_plan)
 # println("")
 # println("Running simulation (part 2)...")
-# @time abc_plan = setup_abc_p2(abc_plan)
-# @time output = run_abc(abc_plan, output)
+# @time abc_plan = SysSimABC.setup_abc_p2(abc_plan)
+# @time output = SysSimABC.run_abc(abc_plan, output)
 #@time abc_plan = change_distance()
 #@time output = run_abc(abc_plan, output)
 println("")
 
-save(string("test-pop-out",pop_num,".jld"), "output", output, "ss_true", EvalSysSimModel.get_ss_obs())
+save(string("test-pop-out.jld"), "output", output, "ss_true", EvalSysSimModel.get_ss_obs())
 
 if expandpart
     println("Expanding to large generation...")
-    @time theta_largegen, weights_largegen = run_abc_largegen(abc_plan, output, EvalSysSimModel.get_ss_obs(), output.accept_log.epsilon[end-1], npart=1000)
+    @time theta_largegen, weights_largegen = SysSimABC.run_abc_largegen(abc_plan, output, EvalSysSimModel.get_ss_obs(), output.accept_log.epsilon[end-1], npart=1000)
     println("")
 
-    save(string("test-pop-out",pop_num,".jld"), "output", output, "ss_true", EvalSysSimModel.get_ss_obs(), "theta_largegen", theta_largegen, "weights_largegen", weights_largegen)
+    save(string("test-pop-out.jld"), "output", output, "ss_true", EvalSysSimModel.get_ss_obs(), "theta_largegen", theta_largegen, "weights_largegen", weights_largegen)
 end
 
 if out2txt

@@ -1,10 +1,11 @@
 using ExoplanetsSysSim
-using ABC
+using ApproximateBayesianComputing
+const ABC = ApproximateBayesianComputing
 using SpecialFunctions
-using Compat.Statistics
-import ABC.CompositeDistributions.CompositeDist
-import ABC.TransformedBetaDistributions.LinearTransformedBeta
-import EvalSysSimModel
+using Statistics
+import ApproximateBayesianComputing.CompositeDistributions.CompositeDist
+import ApproximateBayesianComputing.TransformedBetaDistributions.LinearTransformedBeta
+#import EvalSysSimModel
 
 # https://en.wikipedia.org/wiki/Trigamma_function
 function trigamma_x_gr_4(x::T) where T<: Real
@@ -49,8 +50,8 @@ end
 
 # For algorithm, see https://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=2613&context=etd
 function fit_beta_mle(x::AbstractArray{T,1}; tol::T = 1e-6, max_it::Int64 = 10, init_guess::AbstractArray{T,1} = Array{T}(undef,0), w::AbstractArray{T,1} = Array{T}(undef,0), verbose::Bool = false ) where T<: Real
-    lnxbar =   length(w)>1 ? Compat.Statistics.mean(log.(x),AnalyticWeights(w)) : Compat.Statistics.mean(log.(x))
-    ln1mxbar = length(w)>1 ? Compat.Statistics.mean(log.(1.0.-x),AnalyticWeights(w)) : Compat.Statistics.mean(log.(1.0.-x))
+    lnxbar =   length(w)>1 ? Statistics.mean(log.(x),AnalyticWeights(w)) : Compat.Statistics.mean(log.(x))
+    ln1mxbar = length(w)>1 ? Statistics.mean(log.(1.0.-x),AnalyticWeights(w)) : Compat.Statistics.mean(log.(1.0.-x))
 
     function itterate( mle_guess::Vector{T} ) where T<:Real
         (alpha, beta) = (mle_guess[1], mle_guess[2])
@@ -128,11 +129,11 @@ end
 
 function make_proposal_dist_multidim_beta(theta::AbstractArray{Float64,2}, weights::AbstractArray{Float64,1},  tau_factor::Float64; verbose::Bool = false)
     global sim_param_closure
-    const limitP::Array{Float64,1} = get_any(EvalSysSimModel.sim_param_closure, "p_lim_arr", Array{Float64,1})
-    const p_dim = length(limitP)-1
-    const r_dim = length(get_any(EvalSysSimModel.sim_param_closure, "r_lim_arr", Array{Float64,1}))-1
+    local limitP::Array{Float64,1} = get_any(EvalSysSimModel.sim_param_closure, "p_lim_arr", Array{Float64,1})
+    local p_dim = length(limitP)-1
+    local r_dim = length(get_any(EvalSysSimModel.sim_param_closure, "r_lim_arr", Array{Float64,1}))-1
     
-    theta_mean =  sum(theta.*weights',2) # weighted mean for parameters
+    theta_mean =  sum(theta.*weights',dims=2) # weighted mean for parameters
     theta_var = ABC.var_weighted(theta'.-theta_mean',weights)  # scaled, weighted covar for parameters
     tau_factor_indiv = fill(tau_factor,length(theta_var))
 
@@ -163,11 +164,11 @@ end
 
 function make_proposal_dist_multidim_beta_dirichlet(theta::AbstractArray{Float64,2}, weights::AbstractArray{Float64,1},  tau_factor::Float64; verbose::Bool = false)
     global sim_param_closure
-    const limitP::Array{Float64,1} = get_any(EvalSysSimModel.sim_param_closure, "p_lim_arr", Array{Float64,1})
-    const p_dim = length(limitP)-1
-    const r_dim = length(get_any(EvalSysSimModel.sim_param_closure, "r_lim_arr", Array{Float64,1}))-1
+    local limitP::Array{Float64,1} = get_any(EvalSysSimModel.sim_param_closure, "p_lim_arr", Array{Float64,1})
+    local p_dim = length(limitP)-1
+    local r_dim = length(get_any(EvalSysSimModel.sim_param_closure, "r_lim_arr", Array{Float64,1}))-1
     
-    theta_mean =  sum(theta.*weights',2) # weighted mean for parameters
+    theta_mean =  sum(theta.*weights',dims=2) # weighted mean for parameters
     theta_var = ABC.var_weighted(theta'.-theta_mean',weights)  # scaled, weighted covar for parameters
     tau_factor_indiv = fill(tau_factor,length(theta_var))
 
@@ -215,7 +216,7 @@ end
 function make_proposal_dist_multidim_beta_ratio(theta::AbstractArray{Float64,2}, weights::AbstractArray{Float64,1},  tau_factor::Float64; verbose::Bool = false)
     global sim_param_closure
     
-    theta_mean =  sum(theta.*weights',2) # weighted mean for parameters
+    theta_mean =  sum(theta.*weights',dims=2) # weighted mean for parameters
     theta_var = ABC.var_weighted(theta'.-theta_mean',weights)  # scaled, weighted covar for parameters
     prior_max = 15.0
 

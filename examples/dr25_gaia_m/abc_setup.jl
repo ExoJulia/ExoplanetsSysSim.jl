@@ -6,8 +6,9 @@ module EvalSysSimModel
 export setup, get_param_vector, get_ss_obs
 export gen_data, calc_summary_stats, calc_distance, is_valid_uniform, is_valid_beta, is_valid_dirichlet, normalize_dirch
 using ExoplanetsSysSim
-using ABC
-include(joinpath(Pkg.dir(),"ExoplanetsSysSim","examples","dr25_gaia_m", "christiansen_func.jl"))
+using ApproximateBayesianComputing
+const ABC = ApproximateBayesianComputing
+include(joinpath(abspath(joinpath(dirname(Base.find_package("ExoplanetsSysSim")),"..")),"examples","dr25_gaia_m", "dr25_binrates_func.jl"))
 
 sim_param_closure = SimParam()
 summary_stat_ref_closure =  CatalogSummaryStatistics()
@@ -15,10 +16,10 @@ summary_stat_ref_closure =  CatalogSummaryStatistics()
 function is_valid_uniform(param_vector::Vector{Float64})
     global sim_param_closure
     update_sim_param_from_vector!(param_vector,sim_param_closure)
-    const rate_tab::Array{Float64,2} = get_any(sim_param_closure, "obs_par", Array{Float64,2})
+    local rate_tab::Array{Float64,2} = get_any(sim_param_closure, "obs_par", Array{Float64,2})
     limitP::Array{Float64,1} = get_any(sim_param_closure, "p_lim_arr", Array{Float64,1})
     #const lambda = sum_kbn(rate_tab)
-    if any(x -> x < 0., rate_tab) || any([floor(3*log(limitP[i+1]/limitP[i])/log(2)) for i in 1:length(limitP)-1] .< sum(rate_tab, 1)')
+    if any(x -> x < 0., rate_tab) || any([floor(3*log(limitP[i+1]/limitP[i])/log(2)) for i in 1:length(limitP)-1] .< sum(rate_tab, dims=1)')
         return false
     end
     return true
@@ -27,7 +28,7 @@ end
 function is_valid_dirichlet(param_vector::Vector{Float64})
     global sim_param_closure
     update_sim_param_from_vector!(param_vector,sim_param_closure)
-    const rate_tab::Array{Float64,2} = get_any(sim_param_closure, "obs_par", Array{Float64,2})
+    local rate_tab::Array{Float64,2} = get_any(sim_param_closure, "obs_par", Array{Float64,2})
     limitP::Array{Float64,1} = get_any(EvalSysSimModel.sim_param_closure, "p_lim_arr", Array{Float64,1})
     #const lambda = sum_kbn(rate_tab)
     if any(x -> x < 0., rate_tab) || any([floor(3*log(limitP[i+1]/limitP[i])/log(2)) for i in 1:length(limitP)-1] .< rate_tab[1,:])
@@ -38,8 +39,8 @@ end
 
 function normalize_dirch(param_vector::Vector{Float64})
     global sim_param_closure
-    const p_dim = length(get_any(sim_param_closure, "p_lim_arr", Array{Float64,1}))-1
-    const r_dim = length(get_any(sim_param_closure, "r_lim_arr", Array{Float64,1}))-1
+    local p_dim = length(get_any(sim_param_closure, "p_lim_arr", Array{Float64,1}))-1
+    local r_dim = length(get_any(sim_param_closure, "r_lim_arr", Array{Float64,1}))-1
 
     for i in 1:p_dim
         param_vector[((i-1)*(r_dim+1)+2):((i-1)*(r_dim+1)+(r_dim+1))] ./= sum(param_vector[((i-1)*(r_dim+1)+2):((i-1)*(r_dim+1)+(r_dim+1))])
@@ -55,8 +56,8 @@ function is_valid_mfgk_ratio(param_vector::Vector{Float64})
     limitP::Array{Float64,1} = get_any(sim_param_closure, "p_lim_arr", Array{Float64,1})
     const rate_tab::Array{Float64,2} = get_any(sim_param_closure, "obs_par", Array{Float64,2})[:,1:length(limitP)]
     const mfgk_ratio::Float64 = get_real(sim_param, "mfgk_ratio") 
-    #const lambda = sum_kbn(rate_tab)
-    if any(x -> x < 0., rate_tab) || any([floor(3*log(limitP[i+1]/limitP[i])/log(2)) for i in 1:length(limitP)-1] .< mfgk_ratio*sum(rate_tab, 1)')
+    #const lambda = sum(rate_tab)
+    if any(x -> x < 0., rate_tab) || any([floor(3*log(limitP[i+1]/limitP[i])/log(2)) for i in 1:length(limitP)-1] .< mfgk_ratio*sum(rate_tab, dims=1)')
         return false
     end
     return true
@@ -88,18 +89,18 @@ function calc_distance(sum_stat_obs::CatalogSummaryStatistics,sum_stat_sim::Cata
 end
 
 function setup(prior_choice::String, bin_size_factor::Float64)
-    global sim_param_closure = setup_sim_param_christiansen()
+    global sim_param_closure = setup_sim_param_dr25binrates()
     add_param_fixed(sim_param_closure,"bin_size_factor",bin_size_factor)
     if prior_choice == "dirichlet"
         sim_param_closure = set_test_param_total(sim_param_closure)
-        add_param_fixed(sim_param_closure,"generate_num_planets",generate_num_planets_christiansen_dirichlet)
+        add_param_fixed(sim_param_closure,"generate_num_planets",generate_num_planets_binrates_dirichlet)
         if (length(get_any(sim_param_closure, "r_lim_arr", Array{Float64,1}))-1) > 1
-            add_param_fixed(sim_param_closure,"generate_period_and_sizes", generate_period_and_sizes_christiansen_dirichlet)
+            add_param_fixed(sim_param_closure,"generate_period_and_sizes", generate_period_and_sizes_binrates_dirichlet)
         end
     elseif prior_choice == "beta"
         sim_param_closure = set_test_param(sim_param_closure)
-        add_param_fixed(sim_param_closure,"generate_num_planets",generate_num_planets_christiansen_beta)
-        add_param_fixed(sim_param_closure,"generate_period_and_sizes", generate_period_and_sizes_christiansen_beta)
+        add_param_fixed(sim_param_closure,"generate_num_planets",generate_num_planets_binrates_beta)
+        add_param_fixed(sim_param_closure,"generate_period_and_sizes", generate_period_and_sizes_binrates_beta)
     elseif prior_choice == "uniform"
         sim_param_closure = set_test_param(sim_param_closure)
     else
@@ -118,7 +119,7 @@ function setup(prior_choice::String, bin_size_factor::Float64)
     ### Use real planet candidate catalog data
     df_koi,usable_koi = read_koi_catalog(sim_param_closure)
     println("# Finished reading in KOI data")  
-    df_star = setup_star_table_christiansen(sim_param_closure)
+    df_star = setup_star_table_dr25(sim_param_closure)
     println("# Finished reading in stellar data")
     cat_obs = setup_actual_planet_candidate_catalog(df_star, df_koi, usable_koi, sim_param_closure)
     println("# Finished setting up true catalog")
@@ -137,18 +138,21 @@ end
 
 end  # module EvalSysSimModel
 
-include(joinpath(Pkg.dir("ABC"),"src/composite.jl"))
+#include(joinpath(Pkg.dir("ABC"),"src/composite.jl"))
 
 module SysSimABC
 export setup_abc, run_abc, run_abc_largegen, setup_abc_p2
-import ABC
-import Distributions
-using CompositeDistributions
-using Compat
+using Distributions, Random, Distributed
+using ApproximateBayesianComputing
+const ABC = ApproximateBayesianComputing
+import ApproximateBayesianComputing.CompositeDistributions.CompositeDist
+import ApproximateBayesianComputing.TransformedBetaDistributions.LinearTransformedBeta
+
+#using Compat
 import ExoplanetsSysSim
-import EvalSysSimModel
-include(joinpath(Pkg.dir(),"ExoplanetsSysSim","examples","dr25_gaia_m", "christiansen_func.jl"))
-include(joinpath(Pkg.dir(),"ExoplanetsSysSim","examples","dr25_gaia_m", "beta_proposal.jl"))
+import ..EvalSysSimModel
+include(joinpath(abspath(joinpath(dirname(Base.find_package("ExoplanetsSysSim")),"..")),"examples","dr25_gaia_m", "dr25_binrates_func.jl"))
+include(joinpath(abspath(joinpath(dirname(Base.find_package("ExoplanetsSysSim")),"..")),"examples","dr25_gaia_m", "beta_proposal.jl"))
 
 function setup_abc(num_dist::Integer = 0; prior_choice::String = "uniform", bin_size_factor::Float64 = 1.5)
     EvalSysSimModel.setup(prior_choice, bin_size_factor)
@@ -156,7 +160,7 @@ function setup_abc(num_dist::Integer = 0; prior_choice::String = "uniform", bin_
     limitP::Array{Float64,1} = get_any(EvalSysSimModel.sim_param_closure, "p_lim_arr", Array{Float64,1})
     limitR::Array{Float64,1} = get_any(EvalSysSimModel.sim_param_closure, "r_lim_arr", Array{Float64,1})
     limitR_full::Array{Float64,1} = get_any(EvalSysSimModel.sim_param_closure, "r_lim_full", Array{Float64,1})
-    const r_dim = length(limitR)-1
+    local r_dim = length(limitR)-1
     
     prior_arr = ContinuousDistribution[]
     ss_obs_table = EvalSysSimModel.get_ss_obs().stat["planets table"]
@@ -217,8 +221,8 @@ function run_abc_largegen(abc_plan::ABC.abc_pmc_plan_type, pop::ABC.abc_populati
 
     println("# run_abc_largegen: ",EvalSysSimModel.sim_param_closure)
     sampler_largegen = abc_plan.make_proposal_dist(pop, abc_plan.tau_factor)
-    theta_largegen = Array{Float64}(size(pop.theta, 1), npart)
-    weight_largegen = Array{Float64}(npart)
+    theta_largegen = Array{Float64}(undef, size(pop.theta, 1), npart)
+    weight_largegen = Array{Float64}(undef, npart)
     for i in 1:npart
         theta_val, dist_largegen, attempts_largegen = ABC.generate_theta(abc_plan, sampler_largegen, ss_true, epshist_targ)
         theta_largegen[:,i] = theta_val  
