@@ -161,7 +161,7 @@ function read_koi_catalog(filename::String, force_reread::Bool = false)
 
             is_usable = .&(is_cand, has_radius, has_period)
             usable = findall(is_usable)
-           #  symbols_to_keep = [!,:kepid, :kepoi_name, :koi_pdisposition, :koi_score, :koi_ror, :koi_period, :koi_period_err1, :koi_period_err2, :koi_time0bk, :koi_time0bk_err1, :koi_time0bk_err2, :koi_depth, :koi_depth_err1, :koi_depth_err2, :koi_duration, :koi_duration_err1, :koi_duration_err2]
+           #  symbols_to_keep = [:kepid, :kepoi_name, :koi_pdisposition, :koi_score, :koi_ror, :koi_period, :koi_period_err1, :koi_period_err2, :koi_time0bk, :koi_time0bk_err1, :koi_time0bk_err2, :koi_depth, :koi_depth_err1, :koi_depth_err2, :koi_duration, :koi_duration_err1, :koi_duration_err2]
            # df = df[usable, symbols_to_keep]
            # tmp_df = DataFrame()
            # for col in names(df)
