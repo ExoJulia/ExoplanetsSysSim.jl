@@ -22,7 +22,7 @@ function setup(sim_param::SimParam; force_reread::Bool = false)
   global df
   wf = WindowFunction.setup_window_function(sim_param)
   WindowFunction.setup_OSD_interp(sim_param) #read in osd files so they can be interpolated
-  if haskey(sim_param,"read_stellar_catalog") && !force_reread
+  if hasproperty(sim_param,"read_stellar_catalog") && !force_reread
      return df
      #return data
   end
@@ -110,7 +110,7 @@ end
 
 function star_table_has_key(s::Symbol)
   global df
-  haskey(df,s)
+  hasproperty(df,s)
 end
 
 end # module StellarTable

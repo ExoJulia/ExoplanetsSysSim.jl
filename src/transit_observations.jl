@@ -374,8 +374,8 @@ function get_durations_searched_Kepler(period::Float64,duration::Float64)
   #determine what maximum and minimum durations were searched for this period
   while min_duration == 0.0 || max_duration == 0.0
     if i > 14
-      println("No durations match this period")
-      return(0.0,0.0)
+      @warn "No duration searched match this period and duration." period duration 
+      return (min_duration > 0.0) ? min_duration/24 : 0.0
     end
     if period <= max_periods[i] && min_duration == 0.0
       min_duration = cdpp_durations[i]
@@ -610,7 +610,7 @@ function test_transit_observations(sim_param::SimParam; verbose::Bool=false)  # 
 end
 
 
-randtn() = rand(TruncatedNormal(0.0,1.0,-0.999,0.999))
+randtn() = rand(truncated(Normal(0.0,1.0),-0.999,0.999))
 
 function transit_noise_model_no_noise(t::KeplerTarget, s::Integer, p::Integer, depth::Float64, duration::Float64, snr::Float64, num_tr::Float64; b::Float64 = 0.0)
   period = t.sys[s].orbit[p].P
