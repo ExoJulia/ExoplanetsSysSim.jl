@@ -242,7 +242,8 @@ function calc_simulated_system_detection_probs(ps::PlanetarySystem{StarT}, prob_
   invalid_prob_flag = false
 
   #ps_detectable = PlanetarySystemSingleStar(ps,idx_detectable)
-  ps_detectable = PlanetarySystem(ps,idx_detectable)
+  #ps_detectable = PlanetarySystem(ps,idx_detectable)
+  ps_detectable = PlanetarySystem(ps.star,ps.planet[idx_detectable],ps.orbit[idx_detectable])
 
   combo_sample_probs = rand(num_samples)
   combo_cum_probs = zeros(num_samples)

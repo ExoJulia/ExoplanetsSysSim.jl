@@ -610,7 +610,7 @@ function test_transit_observations(sim_param::SimParam; verbose::Bool=false)  # 
 end
 
 
-randtn() = rand(TruncatedNormal(0.0,1.0,-0.999,0.999))
+randtn() = rand(truncated(Normal(0.0,1.0),-0.999,0.999))
 
 function transit_noise_model_no_noise(t::KeplerTarget, s::Integer, p::Integer, depth::Float64, duration::Float64, snr::Float64, num_tr::Float64; b::Float64 = 0.0)
   period = t.sys[s].orbit[p].P

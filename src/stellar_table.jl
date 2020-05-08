@@ -110,7 +110,7 @@ end
 
 function star_table_has_key(s::Symbol)
   global df
-  haskey(df,s)
+  hasproperty(df,s)
 end
 
 end # module StellarTable
