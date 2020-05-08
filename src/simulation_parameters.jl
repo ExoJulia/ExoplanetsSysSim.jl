@@ -28,7 +28,7 @@ function package_version_or_head(m::Module)
 end
 
 function package_version_or_head(m::String)
-   first(skipmissing(map(pi->pi.name==m ? pi.version : missing,values(Pkg.dependencies()))))
+   [(name=d.name,version=d.version) for d in values(Pkg.dependencies()) if d.is_direct_dep ]
 end
 
 function pkg_installed()
