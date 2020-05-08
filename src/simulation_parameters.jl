@@ -22,8 +22,17 @@ function package_version_or_head(m::Module)
         repo = LibGit2.GitRepo(dirname(pathof(m)))
         return head = LibGit2.headname(repo)
     catch
-        return Pkg.installed()[string(m)]
+        #return Pkg.installed()[string(m)]
+        @warn "Can't find headname of repo for " * string(m)
     end
+end
+
+function package_version_or_head(m::String)
+   first(skipmissing(map(pi->pi.name==m ? pi.version : missing,values(Pkg.dependencies()))))
+end
+
+function pkg_installed()
+   collect(skipmissing(map(d->d.is_direct_dep ? (name=d.name,version=d.version) : missing,values(Pkg.dependencies()))))
 end
 
 mutable struct SimParam
@@ -45,7 +54,8 @@ function SimParam(p::Dict{String,Any})   # By default all parameters are set as 
 end
 
 function SimParam()
-  d = Dict{String,Any}([julia_version_pair, ("Pkg.installed",Pkg.installed())])
+  #d = Dict{String,Any}([julia_version_pair, ("Pkg.installed",Pkg.installed())])
+  d = Dict{String,Any}([julia_version_pair, ("Pkg.installed",pkg_installed())])
   return SimParam(d)
 end
 
@@ -57,7 +67,8 @@ function __init__()
 Creates a nearly empty SimParam object, with just the version id and potentially other information about the code, system, runtime, etc.
 """
 function SimParam()
-  d = Dict{String,Any}([ julia_version_pair, ("hostname",gethostname()), ("time",time()), ("Pkg.installed",Pkg.installed()) ])
+  #d = Dict{String,Any}([ julia_version_pair, ("hostname",gethostname()), ("time",time()), ("Pkg.installed",Pkg.installed()) ])
+  d = Dict{String,Any}([ julia_version_pair, ("hostname",gethostname()), ("time",time()), ("Pkg.installed",pkg_installed()) ])
   SimParam(d)
 end
 
