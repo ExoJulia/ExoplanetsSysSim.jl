@@ -62,8 +62,8 @@ function setup(filename::String; force_reread::Bool = false)
   usable = find(is_usable)
   df = df[usable, symbols_to_keep]
   end
-    df[:wf_id] = map(x->ExoplanetsSysSim.WindowFunction.get_window_function_id(x,use_default_for_unknown=false),df[:kepid])
-    obs_5q = df[:wf_id].!=-1
+    df[!,:wf_id] = map(x->ExoplanetsSysSim.WindowFunction.get_window_function_id(x,use_default_for_unknown=false),df[!,:kepid])
+    obs_5q = df[!,:wf_id].!=-1
     #df = df[obs_5q,keys(df.colindex)]
     df = df[obs_5q,names(df)]
     StellarTable.set_star_table(df)
