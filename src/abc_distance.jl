@@ -145,7 +145,13 @@ function distance_poisson_draw(lambda::Real, k::Integer)
   abs( simulated_number_of_detections -k)
 end
 
-
+# Calculate L2 distance and the number of simulated planets detected for a binned occurrence rate where each planet's detection is drawn from a Bernoulli distribution using the planet's detection probability.
+# num_pl_obs = Number of planets in (true) observed catalog
+# num_targets_obs = Number of target stars in (true) observed catalog
+# prob_detect_list = Detection probabilities for planets in simulated catalog
+# num_targets_sim = Number of target stars in simulated catalog
+# bin_match_list = List of simulated catalog planet indices associated with current occurrence rate bin
+# Output: distance, number of detected simulated planets
 function distance_sum_of_bernoulli_draws(num_pl_obs::Integer, num_targets_obs::Integer, prob_detect_list::Vector{TReal}, num_targets_sim::Integer, bin_match_list::Vector{TInt}) where {TReal<:Real, TInt<:Integer}
    @assert(0<=num_pl_obs<=num_targets_obs)
    num_pl_match = length(bin_match_list)
@@ -188,7 +194,7 @@ function distance_canberra_modified(x::AbstractVector{T}, y::AbstractVector{S}) 
     return dist_sum
 end
 
-# compute originalCanberra distance.
+# compute original Canberra distance.
 function distance_canberra_orig(x::AbstractVector{T}, y::AbstractVector{S}) where {T<:Real, S<:Real}
     @assert length(x) == length(y)
     dist_sum = 0.0
