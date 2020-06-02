@@ -145,13 +145,22 @@ function distance_poisson_draw(lambda::Real, k::Integer)
   abs( simulated_number_of_detections -k)
 end
 
-# Calculate L2 distance and the number of simulated planets detected for a binned occurrence rate where each planet's detection is drawn from a Bernoulli distribution using the planet's detection probability.
-# num_pl_obs = Number of planets in (true) observed catalog
-# num_targets_obs = Number of target stars in (true) observed catalog
-# prob_detect_list = Detection probabilities for planets in simulated catalog
-# num_targets_sim = Number of target stars in simulated catalog
-# bin_match_list = List of simulated catalog planet indices associated with current occurrence rate bin
-# Output: distance, number of detected simulated planets
+"""
+    distance_sum_of_bernoulli_draws(num_pl_obs, num_targets_obs, prob_detect_list, num_targets_sim, bin_match_list)
+
+Calculate L2 distance and the number of simulated planets detected for a binned occurrence rate where each planet's detection is drawn from a Bernoulli distribution using the planet's detection probability.
+
+# Arguments:
+- `num_pl_obs::Integer`: Number of planets in (true) observed catalog
+- `num_targets_obs::Integer`: Number of target stars in (true) observed catalog
+- `prob_detect_list::Vector{Float}`: Detection probabilities for planets in simulated catalog
+- `num_targets_sim::Integer`: Number of target stars in simulated catalog
+- `bin_match_list::Vector{Integer}`: List of simulated catalog planet indices associated with current occurrence rate bin
+
+# Returns: 
+- L2 distance between provided (true) observed catalog and simulated catalog summary statistics
+- Number of detected simulated planets
+"""
 function distance_sum_of_bernoulli_draws(num_pl_obs::Integer, num_targets_obs::Integer, prob_detect_list::Vector{TReal}, num_targets_sim::Integer, bin_match_list::Vector{TInt}) where {TReal<:Real, TInt<:Integer}
    @assert(0<=num_pl_obs<=num_targets_obs)
    num_pl_match = length(bin_match_list)

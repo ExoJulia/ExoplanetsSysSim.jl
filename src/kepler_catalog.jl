@@ -23,11 +23,21 @@ mutable struct KeplerObsCatalog
 end
 KeplerObsCatalog() = KeplerObsCatalog(KeplerTargetObs[])
 
-# Wrapper function to create catalog of simulated Kepler targets.  Requires the following SimParam parameters to be set:
-# num_targets_sim_pass_one = Number of Kepler targets in simulated catalog
-# generate_kepler_target = Function which generates Kepler targets
-# (Optional) stellar_catalog = Stellar catalog filename
-# (Optional) star_table_setup = Function that loads stellar catalog into DataFrame
+"""
+    generate_kepler_physical_catalog(sim_param)
+
+Wrapper function to create catalog of simulated Kepler targets.
+
+# Arguments:
+- `sim_param::SimParam`: Simulation parameter object; must have the following parameters set:
+  - num_targets_sim_pass_one = Number of Kepler targets in simulated catalog
+  - generate_kepler_target = Function which generates Kepler targets
+  - (Optional) stellar_catalog = Stellar catalog filename
+  - (Optional) star_table_setup = Function that loads stellar catalog into DataFrame
+
+# Returns:
+Kepler physical catalog object containing all simulated Kepler targets and associated planetary systems.
+"""
 function generate_kepler_physical_catalog(sim_param::SimParam)
    if haskey(sim_param,"stellar_catalog")
       star_tab_func = get_function(sim_param, "star_table_setup")
@@ -40,17 +50,55 @@ function generate_kepler_physical_catalog(sim_param::SimParam)
    return KeplerPhysicalCatalog(target_list)
 end
 
-# Wrapper functions to simulate the observation output catalog of simulated Kepler targets using either the sky averaging (CORBITS) or single observer observation scheme.
+"""
+    observe_kepler_targets_sky_avg(input, sim_param)
+
+Wrapper function to create catalog of simulated observations of Kepler targets using the sky averaging observation scheme (i.e. each planet's detection probability is the average detection probability over all view-angles).
+
+# Arguments:
+- `input::KeplerPhysicalCatalog`: Catalog object of simulated Kepler targets and associated planetary systems to be observed
+- `sim_param::SimParam`: Simulation parameter object; requires the following simulation parameters to be set:
+  - calc_target_obs_sky_ave: Function name for sky averaging simulated observations
+
+# Returns:
+Kepler observations catalog object containing all properties observed from the Kepler targets and associated planetary systems that were detected during the simulation.
+"""
 function observe_kepler_targets_sky_avg(input::KeplerPhysicalCatalog, sim_param::SimParam )
   calc_target_obs = get_function(sim_param,"calc_target_obs_sky_ave")
   return observe_kepler_targets(calc_target_obs, input, sim_param)
 end
 
+"""
+    observe_kepler_targets_single_obs(input, sim_param)
+
+Wrapper function to create catalog of simulated observations of Kepler targets using the single observer observation scheme (i.e. each planet's detection probability is the detection probability from the Earth).
+
+# Arguments:
+- `input::KeplerPhysicalCatalog`: Catalog object of simulated Kepler targets and associated planetary systems to be observed
+- `sim_param::SimParam`: Simulation parameter object; requires the following simulation parameters to be set:
+  - calc_target_obs_single_obs: Function name for single observer simulated observations
+
+# Returns:
+Kepler observations catalog object containing all properties observed from the Kepler targets and associated planetary systems that were detected during the simulation.
+"""
 function observe_kepler_targets_single_obs(input::KeplerPhysicalCatalog, sim_param::SimParam )
   calc_target_obs = get_function(sim_param,"calc_target_obs_single_obs")
   return observe_kepler_targets(calc_target_obs, input, sim_param)
 end
 
+"""
+    observe_kepler_targets(calc_target_obs, input, sim_param)
+
+Wrapper function to create catalog of simulated observations of Kepler targets.
+
+# Arguments:
+- `calc_target_obs::Function`: Function to use in simulating observations of Kepler targets (sky averaging vs. single observer schemes)
+- `input::KeplerPhysicalCatalog`: Catalog object of simulated Kepler targets and associated planetary systems to be observed
+- `sim_param::SimParam`: Simulation parameter object
+
+# Returns:
+Kepler observations catalog object containing all properties observed from the Kepler targets and associated planetary systems that were detected during the simulation.
+"""
 function observe_kepler_targets(calc_target_obs::Function, input::KeplerPhysicalCatalog, sim_param::SimParam )
   #calc_target_obs = get_function(sim_param,"calc_target_obs_sky_ave")
   #calc_target_obs = get_function(sim_param,"calc_target_obs_single_obs")
@@ -138,13 +186,38 @@ function simulated_read_kepler_observations(sim_param::SimParam )
    return output
 end
 
-# Wrapper function to read Kepler Object of Interest catalog given SimParam
+"""
+    read_koi_catalog(sim_param, force_reread=false)
+
+Wrapper function to read Kepler Object of Interest (KOI) catalog given SimParam
+
+# Arguments:
+- `sim_param::SimParam`: Simulation parameter object; this function uses the following parameters from the SimParam object:
+  - koi_catalog: String filename of Kepler Object of Interest catalog (if not provided, defaults to "q1_q17_dr25_koi.csv"
+- `force_reread::Bool`: Should the file be read in even if a DataFrame of the KOIs already exists in workspace?
+
+# Returns:
+- Dataframe of KOI objects (and their respective properties).
+- Vector of booleans indicating which KOIs  were designated as planet candidates by the Kepler pipeline and have a valid observed radius ratio and period (necessary for detection probability calculation).
+"""
 function read_koi_catalog(sim_param::SimParam, force_reread::Bool = false)
     filename = convert(String,joinpath(dirname(pathof(ExoplanetsSysSim)),"..", "data", convert(String,get(sim_param,"koi_catalog","q1_q17_dr25_koi.csv")) ) )
     return read_koi_catalog(filename, force_reread)
 end
 
-# Read Kepler Object of Interest catalog given filename
+"""
+    read_koi_catalog(filename, force_reread=false)
+
+Function to read Kepler Object of Interest (KOI) catalog given filename string.
+
+# Arguments:
+- `filename::String`: String filename of Kepler Object of Interest catalog
+- `force_reread::Bool`: Should the file be read in even if a DataFrame of the KOIs already exists in workspace?
+
+# Returns:
+- Dataframe of KOI objects (and their respective properties).
+- Vector of booleans indicating which KOIs  were designated as planet candidates by the Kepler pipeline and have a valid observed radius ratio and period (necessary for detection probability calculation).
+"""
 function read_koi_catalog(filename::String, force_reread::Bool = false)
     local df, usable
 
@@ -185,12 +258,21 @@ function read_koi_catalog(filename::String, force_reread::Bool = false)
     return df, usable
 end
 
-# Create (true) catalog of Kepler observations of Kepler targets
-# df_star = DataFrame containing all Kepler target stars in catalog
-# (df_star is assumed to have fields kepid, mass and radius for all targets in the survey)
-# df_koi = DataFrame containing all Kepler Object of Interests (KOIs)
-# usable_koi = Array of KOI dataframe row indices corresponding to KOIs to use
-# sim_param = Simulation parameters
+"""
+    setup_actual_planet_candidate_catalog(df_star, df_koi, usable_koi, sim_param)
+
+Create (true) catalog of Kepler observations of Kepler targets
+
+# Arguments:
+- `df_star::DataFrame`: DataFrame containing all Kepler target stars in catalog
+   NOTE: df_star is assumed to have fields kepid, mass and radius for all targets in the survey)
+- `df_koi::DataFrame`: DataFrame containing all Kepler Object of Interests (KOIs)
+- `usable_koi::Array{Integer}`: Array of KOI dataframe row indices corresponding to KOIs to use
+- `sim_param::SimParam`: Simulation parameter object
+
+# Returns:
+- Kepler observations catalog containing Kepler targets and associated KOIs (to be used as true catalog in comparison with simulated observations)
+"""
 function setup_actual_planet_candidate_catalog(df_star::DataFrame, df_koi::DataFrame, usable_koi::Array{Int64}, sim_param::SimParam)
     local target_obs, num_pl
     df_koi = df_koi[usable_koi,:]
