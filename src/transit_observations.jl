@@ -307,7 +307,7 @@ function calc_transit_duration_eff_winn2010(ps::PlanetarySystemAbstract, pl::Int
   if b>one(b)+size_ratio
      return zero(b)
   end
-  duration_central_circ = calc_transit_duration_ecentral_circ(ps,pl)
+  duration_central_circ = calc_transit_duration_central_circ(ps,pl)
   arcsin_circ_central = pi/ps.orbit[pl].P*duration_central_circ
 
   one_plus_e_sin_w = 1+ecc*sin(ps.orbit[pl].omega)
