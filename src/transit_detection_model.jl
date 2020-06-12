@@ -439,7 +439,21 @@ function calc_snr_if_transit(t::KeplerTarget, depth::Real, duration::Real, osd::
   snr = depth/osd*1.0e6 # osd is in ppm
 end
 
+"""
+    calc_snr_if_transit_central(t, s, p, sim_param)
 
+Calculate the expected multiple event statistic (signal-to-noise ratio) for planet around Kepler target star using 1-sigma depth function (OSD) at transit center.
+# NOTE: Assumes OSD functions have already been read in for all relevant Kepler targets.
+
+# Arguments:
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Star index within Kepler target
+- `p::Integer`: Planet index within Kepler target
+- `sim_param::SimParam`: Simulation parameters
+
+# Returns:
+(Expected) multiple event statistic (signal-to-noise ratio) at transit center
+"""
 function calc_snr_if_transit_central(t::KeplerTarget, s::Integer, p::Integer, sim_param::SimParam)
   period = t.sys[s].orbit[p].P
   depth = calc_transit_depth(t,s,p)
@@ -454,6 +468,20 @@ function calc_snr_if_transit_central(t::KeplerTarget, s::Integer, p::Integer, si
   calc_snr_if_transit(t,depth,duration_central,osd_central, sim_param,num_transit=num_transit)
 end
 
+"""
+    calc_snr_if_transit_central_cdpp(t, s, p, sim_param)
+
+Calculate the expected multiple event statistic (signal-to-noise ratio) for planet around Kepler target star using CDPP at transit center.
+
+# Arguments:
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Star index within Kepler target
+- `p::Integer`: Planet index within Kepler target
+- `sim_param::SimParam`: Simulation parameters
+
+# Returns:
+(Expected) multiple event statistic (signal-to-noise ratio) at transit center
+"""
 function calc_snr_if_transit_central_cdpp(t::KeplerTarget, s::Integer, p::Integer, sim_param::SimParam)
   depth = calc_transit_depth(t,s,p)
   duration_central = calc_transit_duration_eff_central(t,s,p)
@@ -462,6 +490,26 @@ function calc_snr_if_transit_central_cdpp(t::KeplerTarget, s::Integer, p::Intege
   calc_snr_if_transit_cdpp(t,depth,duration_central,cdpp, sim_param,num_transit=num_transit)
 end
 
+"""
+    calc_prob_detect_if_transit(t, snr, period, duration, sim_param; num_transit = 1)
+    calc_prob_detect_if_transit(t, depth, period, duration, osd, sim_param; num_transit = 1)
+
+Calculate probability of detecting planet signal (if planet transits) using 1-sigma depth (OSD) function.
+# NOTE: Assumes OSD functions already read in.
+
+# Arguments:
+- `t::KeplerTarget`: Kepler target object
+- `snr::Float64`: Expected multiple event statistic (signal-to-noise ratio)
+- `depth::Float64`: (Fractional) transit depth
+- `period::Float64`: Orbital period (in days)
+- `duration::Float64`: Transit duration (in days)
+- `osd::Float64`: OSD for target star given transit duration and period
+- `sim_param::SimParam`: Simulation parameters
+- `num_transit::Float64 = 1`: Expected number of transits observed
+
+# Returns: 
+Probability of detecting planet (if it transits)
+"""
 function calc_prob_detect_if_transit(t::KeplerTarget, snr::Float64, period::Float64, duration::Float64, sim_param::SimParam; num_transit::Float64 = 1)
   min_pdet_nonzero = 1.0e-4                                                # TODO OPT: Consider raising threshold to prevent a plethora of planets that are very unlikely to be detected due to using 0.0 or other small value here
   wf = kepler_window_function(t, num_transit, period, duration)
@@ -473,11 +521,43 @@ function calc_prob_detect_if_transit(t::KeplerTarget, depth::Float64, period::Fl
   return calc_prob_detect_if_transit(t, snr, period, duration, sim_param, num_transit=num_transit)
 end
 
+"""
+    calc_prob_detect_if_transit_cdpp(t, depth, period, duration, cdpp, sim_param; num_transit = 1)
+
+Calculate probability of detecting planet signal (if planet transits) using CDPP.
+
+# Arguments:
+- `t::KeplerTarget`: Kepler target object
+- `depth::Float64`: (Fractional) transit depth
+- `period::Float64`: Orbital period (in days)
+- `duration::Float64`: Transit duration (in days)
+- `cdpp::Float64`: CDPP for target star given transit duration
+- `sim_param::SimParam`: Simulation parameters
+- `num_transit::Float64 = 1`: Expected number of transits observed
+
+# Returns: 
+Probability of detecting planet (if it transits)
+"""
 function calc_prob_detect_if_transit_cdpp(t::KeplerTarget, depth::Float64, period::Float64, duration::Float64, cdpp::Float64, sim_param::SimParam; num_transit::Float64 = 1)
   snr = calc_snr_if_transit_cdpp(t,depth,duration,cdpp, sim_param, num_transit=num_transit)
   return calc_prob_detect_if_transit(t, snr, period, duration, sim_param, num_transit=num_transit)
 end
 
+"""
+    calc_prob_detect_if_transit_central(t, s, p, sim_param)
+
+Calculate probability of detecting planet signal (if planet transits) at transit center using 1-sigma depth (OSD) functions.
+# NOTE: Assumes OSD functions already read in.
+
+# Arguments:
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Star index within Kepler target
+- `p::Integer`: Planet index within Kepler target
+- `sim_param::SimParam`: Simulation parameters
+
+# Returns: 
+Probability of detecting planet (if it transits) at transit center
+"""
 function calc_prob_detect_if_transit_central(t::KeplerTarget, s::Integer, p::Integer, sim_param::SimParam)
   period = t.sys[s].orbit[p].P
   depth = calc_transit_depth(t,s,p)
@@ -492,6 +572,20 @@ function calc_prob_detect_if_transit_central(t::KeplerTarget, s::Integer, p::Int
   calc_prob_detect_if_transit(t,depth,period,duration_central,osd_central, sim_param, num_transit=ntr)
 end
 
+"""
+    calc_prob_detect_if_transit_central_cdpp(t, s, p, sim_param)
+
+Calculate probability of detecting planet signal (if planet transits) at transit center using CDPP
+
+# Arguments:
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Star index within Kepler target
+- `p::Integer`: Planet index within Kepler target
+- `sim_param::SimParam`: Simulation parameters
+
+# Returns: 
+Probability of detecting planet (if it transits) at transit center
+"""
 function calc_prob_detect_if_transit_central_cdpp(t::KeplerTarget, s::Integer, p::Integer, sim_param::SimParam)
   period = t.sys[s].orbit[p].P
   depth = calc_transit_depth(t,s,p)
@@ -501,6 +595,21 @@ function calc_prob_detect_if_transit_central_cdpp(t::KeplerTarget, s::Integer, p
   calc_prob_detect_if_transit_cdpp(t,depth,period,duration_central,cdpp, sim_param, num_transit=ntr)
 end
 
+"""
+    calc_prob_detect_if_transit_with_actual_b(t, s, p, sim_param)
+
+Calculate probability of detecting planet signal (if planet transits) at transit center using 1-sigma depth (OSD) functions and the impact parameter of the provided orbit.
+# NOTE: Assumes OSD functions already read in.
+
+# Arguments:
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Star index within Kepler target
+- `p::Integer`: Planet index within Kepler target
+- `sim_param::SimParam`: Simulation parameters
+
+# Returns: 
+Probability of detecting planet (if it transits) given the impact parameter of the planet's orbit
+"""
 function calc_prob_detect_if_transit_with_actual_b(t::KeplerTarget, s::Integer, p::Integer, sim_param::SimParam)
   period = t.sys[s].orbit[p].P
   size_ratio = t.sys[s].planet[p].radius/t.sys[s].star.radius
@@ -519,6 +628,20 @@ function calc_prob_detect_if_transit_with_actual_b(t::KeplerTarget, s::Integer, 
   calc_prob_detect_if_transit(t,depth,period,duration,osd, sim_param, num_transit=ntr)
 end
 
+"""
+    calc_prob_detect_if_transit_with_actual_b_cdpp(t, s, p, sim_param)
+
+Calculate probability of detecting planet signal (if planet transits) at transit center using CDPP and the impact parameter of the provided orbit.
+
+# Arguments:
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Star index within Kepler target
+- `p::Integer`: Planet index within Kepler target
+- `sim_param::SimParam`: Simulation parameters
+
+# Returns: 
+Probability of detecting planet (if it transits) given the impact parameter of the planet's orbit
+"""
 function calc_prob_detect_if_transit_with_actual_b_cdpp(t::KeplerTarget, s::Integer, p::Integer, sim_param::SimParam)
   period = t.sys[s].orbit[p].P
   size_ratio = t.sys[s].planet[p].radius/t.sys[s].star.radius
@@ -532,7 +655,25 @@ function calc_prob_detect_if_transit_with_actual_b_cdpp(t::KeplerTarget, s::Inte
   calc_prob_detect_if_transit_cdpp(t,depth,period,duration,cdpp, sim_param, num_transit=ntr)
 end
 
-# Compute probability of detection if we average over impact parameters b~U[0,1)
+"""
+    calc_ave_prob_detect_if_transit_from_snr(t, snr_central, period, duration_central, size_ratio, osd_central, sim_param; num_transit = 1)
+
+Calculate probability of detecting planet signal (if planet transits) using 1-sigma depth (OSD) function and averaged over impact parameters b~U[0,1).
+# NOTE: Assumes OSD functions already read in.
+
+# Arguments:
+- `t::KeplerTarget`: Kepler target object
+- `snr_central::Float64`: Expected multiple event statistic (signal-to-noise ratio) at transit center
+- `period::Float64`: Orbital period (in days)
+- `duration_central::Float64`: Transit duration (in days) at transit center
+- `size_ratio::Float64`: Ratio of planet-to-star radii
+- `osd_central::Float64`: OSD for target star given transit duration at transit center and period
+- `sim_param::SimParam`: Simulation parameters
+- `num_transit::Float64 = 1`: Expected number of transits observed
+
+# Returns: 
+Probability of detecting planet (if it transits) averaged over impact parameter
+"""
 function calc_ave_prob_detect_if_transit_from_snr(t::KeplerTarget, snr_central::Float64, period::Float64, duration_central::Float64, size_ratio::Float64, osd_central::Float64, sim_param::SimParam; num_transit::Float64 = 1)
   min_pdet_nonzero = 1.0e-4
   wf = kepler_window_function(t, num_transit, period, duration_central)
@@ -579,7 +720,24 @@ function calc_ave_prob_detect_if_transit_from_snr(t::KeplerTarget, snr_central::
   return wf*ave_detection_efficiency
 end
 
-# Compute probability of detection if we average over impact parameters b~U[0,1)
+"""
+    calc_ave_prob_detect_if_transit_from_snr_cdpp(t, snr_central, period, duration_central, size_ratio, osd_central, sim_param; num_transit = 1)
+
+Calculate probability of detecting planet signal (if planet transits) using CDPP and averaged over impact parameters b~U[0,1).
+
+# Arguments:
+- `t::KeplerTarget`: Kepler target object
+- `snr_central::Float64`: Expected multiple event statistic (signal-to-noise ratio) at transit center
+- `period::Float64`: Orbital period (in days)
+- `duration_central::Float64`: Transit duration (in days) at transit center
+- `size_ratio::Float64`: Ratio of planet-to-star radii
+- `cdpp_central::Float64`: CDPP for target star given transit duration at transit center
+- `sim_param::SimParam`: Simulation parameters
+- `num_transit::Float64 = 1`: Expected number of transits observed
+
+# Returns: 
+Probability of detecting planet (if it transits) averaged over impact parameter
+"""
 function calc_ave_prob_detect_if_transit_from_snr_cdpp(t::KeplerTarget, snr_central::Float64, period::Float64, duration_central::Float64, size_ratio::Float64, cdpp_central::Float64, sim_param::SimParam; num_transit::Float64 = 1)
   min_pdet_nonzero = 1.0e-4
   wf = kepler_window_function(t, num_transit, period, duration_central)
@@ -621,7 +779,26 @@ function calc_ave_prob_detect_if_transit_from_snr_cdpp(t::KeplerTarget, snr_cent
   return wf*ave_detection_efficiency
 end
 
+"""
+    calc_ave_prob_detect_if_transit_cdpp(t, depth, period, duration_central, size_ratio, sim_param; num_transit = 1)
+    calc_ave_prob_detect_if_transit_cdpp(t, s, p, sim_param)
 
+Calculate probability of detecting planet signal (if planet transits) using CDPP and averaged over impact parameters b~U[0,1).
+
+# Arguments:
+- `t::KeplerTarget`: Kepler target object
+- `depth::Float64`: (Fractional) transit depth
+- `period::Float64`: Orbital period (in days)
+- `duration_central::Float64`: Transit duration (in days) at transit center
+- `size_ratio::Float64`: Ratio of planet-to-star radii
+- `s::Integer`: Star index within Kepler target
+- `p::Integer`: Planet index within Kepler target
+- `sim_param::SimParam`: Simulation parameters
+- `num_transit::Float64 = 1`: Expected number of transits observed
+
+# Returns: 
+Probability of detecting planet (if it transits) averaged over impact parameter
+"""
 function calc_ave_prob_detect_if_transit_cdpp(t::KeplerTarget, depth::Float64, period::Float64, duration_central::Float64, size_ratio::Float64, sim_param::SimParam; num_transit::Float64 = 1)
   cdpp_central = interpolate_cdpp_to_duration(t, duration_central)
   snr_central = calc_snr_if_transit(t,depth,duration_central,cdpp_central, sim_param, num_transit=num_transit)
