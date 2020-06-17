@@ -672,13 +672,38 @@ Effective transit duration (in days)
 calc_transit_duration_eff(ps::PlanetarySystemAbstract, pl::Integer) = calc_transit_duration_eff_kipping2010(ps,pl)
 calc_transit_duration_eff(t::KeplerTarget, s::Integer, p::Integer ) = calc_transit_duration_eff(t.sys[s],p)
 
+"""
+    calc_transit_duration_eff(t, s, p, sim_param)
 
+Calculates (expected) number of transits observed for planet
+
+# Arguments:
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Index of star in Kepler target
+- `p::Integer`: Index of planet in Kepler target
+- `sim_param::SimParam`: Simulation parameter object
+
+# Returns:
+Effective (expected) number of transits
+"""
 function calc_expected_num_transits(t::KeplerTarget, s::Integer, p::Integer, sim_param::SimParam)
  period = t.sys[s].orbit[p].P
  exp_num_transits = t.duty_cycle * t.data_span/period
  return exp_num_transits
 end
 
+"""
+    get_durations_searched_Kepler(period, duration)
+
+Returns appropriate transit duration for use with 1-sigma depth function (or CDPP) given the range of transit durations searched by the Kepler pipeline.
+
+# Arguments: 
+- `period::Float64`: Orbital period (in days)
+- `duration::Float64`: Transit duration (in days)
+
+# Returns:
+Valid transit duration searched by Kepler pipeline that is closest to the actual transit duration input to the function.
+"""
 #function get_legal_durations(period::Float64,duration::Float64)
 function get_durations_searched_Kepler(period::Float64,duration::Float64)
   num_dur = length(cdpp_durations) # 14
@@ -730,6 +755,20 @@ end
 KeplerTargetObs(n::Integer) = KeplerTargetObs( fill(TransitPlanetObs(),n), fill(TransitPlanetObs(),n), ObservedSystemDetectionProbsEmpty(),  falses(has_sc_bit_array_size), StarObs(0.0,0.0,0) )
 num_planets(t::KeplerTargetObs) = length(t.obs)
 
+"""
+    calc_target_obs_sky_ave(t, sim_param)
+
+Simulate observation of Kepler target (with associated planets) and return observed quantities and detection probabilities of all planets averaging over all viewing angles.
+
+# Arguments:
+- `t::KeplerTarget`: Kepler target object
+- `sim_param::SimParam`: Simulation parameter object, must contain the following values:
+    - max_tranets_in_sys: Maximum number of transiting planets per Kepler target
+    - transit_noise_model: Function to use for simulating noise in the observed properties of the transiting planets
+
+# Returns:
+Kepler observable object containing observed properties and detection probabilities for every planet
+"""
 function calc_target_obs_sky_ave(t::KeplerTarget, sim_param::SimParam)
    max_tranets_in_sys = get_int(sim_param,"max_tranets_in_sys")
    transit_noise_model = get_function(sim_param,"transit_noise_model")
@@ -832,7 +871,20 @@ function calc_target_obs_sky_ave(t::KeplerTarget, sim_param::SimParam)
   return KeplerTargetObs(obs, sigma, sdp_target, has_no_sc, star_obs )
 end
 
+"""
+    calc_target_obs_single_obs(t, sim_param)
 
+Simulate observation of Kepler target (with associated planets) and return observed quantities and detection probabilities of all planets assuming a single viewpoint.
+
+# Arguments:
+- `t::KeplerTarget`: Kepler target object
+- `sim_param::SimParam`: Simulation parameter object, must contain the following values:
+    - max_tranets_in_sys: Maximum number of transiting planets per Kepler target
+    - transit_noise_model: Function to use for simulating noise in the observed properties of the transiting planets
+
+# Returns:
+Kepler observable object containing observed properties and detection probabilities for every planet
+"""
 function calc_target_obs_single_obs(t::KeplerTarget, sim_param::SimParam)
   # max_tranets_in_sys = get_int(sim_param,"max_tranets_in_sys")
    transit_noise_model = get_function(sim_param,"transit_noise_model")
@@ -928,6 +980,25 @@ end
 
 randtn() = rand(truncated(Normal(0.0,1.0),-0.999,0.999))
 
+"""
+    transit_noise_model_no_noise(t, s, p, depth, duration, snr, num_tr, b = 0.0)
+
+Transit noise model that assumes no additional noise introduced to observations.
+
+# Arguments:
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Index of star in Kepler target
+- `p::Integer`: Index of planet in Kepler target
+- `depth::Float64`: (Fractional) transit depth
+- `duration::Float64`: Transit duration (in days)
+- `snr::Float64`: Expected multiple event statistic (signal-to-noise ratio) of transit
+- `num_tr::Float64`: Expected number of transits observed
+- `b::Float64 = 0.0`: Impact parameter of planet's orbit
+
+# Returns
+- TransitPlanetObs object containing simulated period, t0, transit depth, and transit duration
+- TransitPlanetObs object containing simulated uncertainties for period, t0, transit depth, and transit duration
+"""
 function transit_noise_model_no_noise(t::KeplerTarget, s::Integer, p::Integer, depth::Float64, duration::Float64, snr::Float64, num_tr::Float64; b::Float64 = 0.0)
   period = t.sys[s].orbit[p].P
   t0 = period*rand()    # WARNING: Not being calculated from orbit
@@ -940,6 +1011,29 @@ function transit_noise_model_no_noise(t::KeplerTarget, s::Integer, p::Integer, d
   return obs, sigma
 end
 
+"""
+    transit_noise_model_no_noise(t, s, p, depth, duration, snr, num_tr, b = 0.0)
+
+Transit noise model that assumes fixed amounts of uncertainty on observed transit properties. Uncertainties are as follows: 
+- Period = 10^-6
+- t0 = 10^-4
+- Depth = 10^-1
+- Duration = 10^-2
+
+# Arguments:
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Index of star in Kepler target
+- `p::Integer`: Index of planet in Kepler target
+- `depth::Float64`: (Fractional) transit depth
+- `duration::Float64`: Transit duration (in days)
+- `snr::Float64`: Expected multiple event statistic (signal-to-noise ratio) of transit
+- `num_tr::Float64`: Expected number of transits observed
+- `b::Float64 = 0.0`: Impact parameter of planet's orbit
+
+# Returns
+- TransitPlanetObs object containing simulated period, t0, transit depth, and transit duration
+- TransitPlanetObs object containing simulated uncertainties for period, t0, transit depth, and transit duration
+"""
 function transit_noise_model_fixed_noise(t::KeplerTarget, s::Integer, p::Integer, depth::Float64, duration::Float64, snr::Float64, num_tr::Float64; b::Float64 = 0.0)
   period = t.sys[s].orbit[p].P
   t0 = period*rand()    # WARNING: Not being calculated from orbit
@@ -973,6 +1067,25 @@ function make_matrix_pos_def(A::Union{AbstractArray{T1,2},Symmetric{AbstractArra
     end
 end
 
+"""
+    transit_noise_model_diagonal(t, s, p, depth, duration, snr, num_tr, b = calc_impact_parameter(t.sys[s], p))
+
+Transit noise model that uses the Fisher information matrix formulation assuming finite integration from Price & Rogers (2014).
+
+# Arguments:
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Index of star in Kepler target
+- `p::Integer`: Index of planet in Kepler target
+- `depth::Float64`: (Fractional) transit depth
+- `duration::Float64`: Transit duration (in days)
+- `snr::Float64`: Expected multiple event statistic (signal-to-noise ratio) of transit
+- `num_tr::Float64`: Expected number of transits observed
+- `b::Float64 = calc_impact_parameter(t.sys[s], p)`: Impact parameter of planet's orbit
+
+# Returns
+- TransitPlanetObs object containing simulated period, t0, transit depth, and transit duration
+- TransitPlanetObs object containing simulated uncertainties for period, t0, transit depth, and transit duration
+"""
 function transit_noise_model_diagonal(t::KeplerTarget, s::Integer, p::Integer, depth::Float64, duration::Float64, snr::Float64, num_tr::Float64; b::Float64 = calc_impact_parameter(t.sys[s],p) )
     transit_noise_model_price_rogers(t, s, p, depth, duration, snr, num_tr; b=b, diagonal=true )
 end
