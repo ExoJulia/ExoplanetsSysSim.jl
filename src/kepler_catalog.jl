@@ -23,6 +23,21 @@ mutable struct KeplerObsCatalog
 end
 KeplerObsCatalog() = KeplerObsCatalog(KeplerTargetObs[])
 
+"""
+    generate_kepler_physical_catalog(sim_param)
+
+Wrapper function to create catalog of simulated Kepler targets.
+
+# Arguments:
+- `sim_param::SimParam`: Simulation parameter object; must have the following parameters set:
+  - num_targets_sim_pass_one = Number of Kepler targets in simulated catalog
+  - generate_kepler_target = Function which generates Kepler targets
+  - (Optional) stellar_catalog = Stellar catalog filename
+  - (Optional) star_table_setup = Function that loads stellar catalog into DataFrame
+
+# Returns:
+Kepler physical catalog object containing all simulated Kepler targets and associated planetary systems.
+"""
 function generate_kepler_physical_catalog(sim_param::SimParam)
    if haskey(sim_param,"stellar_catalog")
       star_tab_func = get_function(sim_param, "star_table_setup")
@@ -35,16 +50,55 @@ function generate_kepler_physical_catalog(sim_param::SimParam)
    return KeplerPhysicalCatalog(target_list)
 end
 
+"""
+    observe_kepler_targets_sky_avg(input, sim_param)
+
+Wrapper function to create catalog of simulated observations of Kepler targets using the sky averaging observation scheme (i.e. each planet's detection probability is the average detection probability over all view-angles).
+
+# Arguments:
+- `input::KeplerPhysicalCatalog`: Catalog object of simulated Kepler targets and associated planetary systems to be observed
+- `sim_param::SimParam`: Simulation parameter object; requires the following simulation parameters to be set:
+  - calc_target_obs_sky_ave: Function name for sky averaging simulated observations
+
+# Returns:
+Kepler observations catalog object containing all properties observed from the Kepler targets and associated planetary systems that were detected during the simulation.
+"""
 function observe_kepler_targets_sky_avg(input::KeplerPhysicalCatalog, sim_param::SimParam )
   calc_target_obs = get_function(sim_param,"calc_target_obs_sky_ave")
   return observe_kepler_targets(calc_target_obs, input, sim_param)
 end
 
+"""
+    observe_kepler_targets_single_obs(input, sim_param)
+
+Wrapper function to create catalog of simulated observations of Kepler targets using the single observer observation scheme (i.e. each planet's detection probability is the detection probability from the Earth).
+
+# Arguments:
+- `input::KeplerPhysicalCatalog`: Catalog object of simulated Kepler targets and associated planetary systems to be observed
+- `sim_param::SimParam`: Simulation parameter object; requires the following simulation parameters to be set:
+  - calc_target_obs_single_obs: Function name for single observer simulated observations
+
+# Returns:
+Kepler observations catalog object containing all properties observed from the Kepler targets and associated planetary systems that were detected during the simulation.
+"""
 function observe_kepler_targets_single_obs(input::KeplerPhysicalCatalog, sim_param::SimParam )
   calc_target_obs = get_function(sim_param,"calc_target_obs_single_obs")
   return observe_kepler_targets(calc_target_obs, input, sim_param)
 end
 
+"""
+    observe_kepler_targets(calc_target_obs, input, sim_param)
+
+Wrapper function to create catalog of simulated observations of Kepler targets.
+
+# Arguments:
+- `calc_target_obs::Function`: Function to use in simulating observations of Kepler targets (sky averaging vs. single observer schemes)
+- `input::KeplerPhysicalCatalog`: Catalog object of simulated Kepler targets and associated planetary systems to be observed
+- `sim_param::SimParam`: Simulation parameter object
+
+# Returns:
+Kepler observations catalog object containing all properties observed from the Kepler targets and associated planetary systems that were detected during the simulation.
+"""
 function observe_kepler_targets(calc_target_obs::Function, input::KeplerPhysicalCatalog, sim_param::SimParam )
   #calc_target_obs = get_function(sim_param,"calc_target_obs_sky_ave")
   #calc_target_obs = get_function(sim_param,"calc_target_obs_single_obs")
@@ -113,6 +167,7 @@ end
 
 
 # The following function is primarily left for debugging.
+# Create a catalog of observations of simulated Kepler targets.
 function simulated_read_kepler_observations(sim_param::SimParam )
    println("# WARNING: Using simulated_read_kepler_observations.")
    # if haskey(sim_param,"stellar_catalog")
@@ -131,11 +186,38 @@ function simulated_read_kepler_observations(sim_param::SimParam )
    return output
 end
 
+"""
+    read_koi_catalog(sim_param, force_reread=false)
+
+Wrapper function to read Kepler Object of Interest (KOI) catalog given SimParam
+
+# Arguments:
+- `sim_param::SimParam`: Simulation parameter object; this function uses the following parameters from the SimParam object:
+  - koi_catalog: String filename of Kepler Object of Interest catalog (if not provided, defaults to "q1_q17_dr25_koi.csv"
+- `force_reread::Bool`: Should the file be read in even if a DataFrame of the KOIs already exists in workspace?
+
+# Returns:
+- Dataframe of KOI objects (and their respective properties).
+- Vector of booleans indicating which KOIs  were designated as planet candidates by the Kepler pipeline and have a valid observed radius ratio and period (necessary for detection probability calculation).
+"""
 function read_koi_catalog(sim_param::SimParam, force_reread::Bool = false)
     filename = convert(String,joinpath(dirname(pathof(ExoplanetsSysSim)),"..", "data", convert(String,get(sim_param,"koi_catalog","q1_q17_dr25_koi.csv")) ) )
     return read_koi_catalog(filename, force_reread)
 end
 
+"""
+    read_koi_catalog(filename, force_reread=false)
+
+Function to read Kepler Object of Interest (KOI) catalog given filename string.
+
+# Arguments:
+- `filename::String`: String filename of Kepler Object of Interest catalog
+- `force_reread::Bool`: Should the file be read in even if a DataFrame of the KOIs already exists in workspace?
+
+# Returns:
+- Dataframe of KOI objects (and their respective properties).
+- Vector of booleans indicating which KOIs  were designated as planet candidates by the Kepler pipeline and have a valid observed radius ratio and period (necessary for detection probability calculation).
+"""
 function read_koi_catalog(filename::String, force_reread::Bool = false)
     local df, usable
 
@@ -176,42 +258,57 @@ function read_koi_catalog(filename::String, force_reread::Bool = false)
     return df, usable
 end
 
-# df_star is assumed to have fields kepid, mass and radius for all targets in the survey
+"""
+    setup_actual_planet_candidate_catalog(df_star, df_koi, usable_koi, sim_param)
+
+Create (true) catalog of Kepler observations of Kepler targets
+
+# Arguments:
+- `df_star::DataFrame`: DataFrame containing all Kepler target stars in catalog
+   NOTE: df_star is assumed to have fields kepid, mass and radius for all targets in the survey)
+- `df_koi::DataFrame`: DataFrame containing all Kepler Object of Interests (KOIs)
+- `usable_koi::Array{Integer}`: Array of KOI dataframe row indices corresponding to KOIs to use
+- `sim_param::SimParam`: Simulation parameter object
+
+# Returns:
+- Kepler observations catalog containing Kepler targets and associated KOIs (to be used as true catalog in comparison with simulated observations)
+"""
 function setup_actual_planet_candidate_catalog(df_star::DataFrame, df_koi::DataFrame, usable_koi::Array{Int64}, sim_param::SimParam)
     local target_obs, num_pl
     df_koi = df_koi[usable_koi,:]
 
-    if haskey(sim_param, "koi_subset_csv")
-        koi_subset = fill(false, length(df_koi[!,:kepid]))
+    # Deprecated code to take a list of KepIDs and KOI names to pre-select a subset of KOIs
+    # if haskey(sim_param, "koi_subset_csv")
+    #     koi_subset = fill(false, length(df_koi[!,:kepid]))
 
-        subset_df = readtable(convert(String,get(sim_param,"koi_subset_csv", "christiansen_kov.csv")), header=true, separator=' ')
+    #     subset_df = readtable(convert(String,get(sim_param,"koi_subset_csv", "christiansen_kov.csv")), header=true, separator=' ')
 
-        for n in 1:length(subset_df[!,1])
-            subset_colnum = 1
-            subset_entry = findall(x->x==subset_df[n,1], df_koi[names(subset_df)[1]])
-            # println("Initial cut: ", subset_entry)
-            while (length(subset_entry) > 1) & (subset_colnum < length(names(subset_df)))
-                subset_colnum += 1
+    #     for n in 1:length(subset_df[!,1])
+    #         subset_colnum = 1
+    #         subset_entry = findall(x->x==subset_df[n,1], df_koi[names(subset_df)[1]])
+    #         # println("Initial cut: ", subset_entry)
+    #         while (length(subset_entry) > 1) & (subset_colnum < length(names(subset_df)))
+    #             subset_colnum += 1
 
-                subsubset = findall(x->round(x*10.)==round(subset_df[n,subset_colnum]*10.), df_koi[subset_entry,names(subset_df)[subset_colnum]])
-	        # println("Extra cut: ", subset_df[n,subset_colnum], " / ", df_koi[subset_entry,col_idx], " = ", subsubset)
-	        subset_entry = subset_entry[subsubset]
-            end
-            if length(subset_entry) > 1
-	        cand_sub = findall(x->x == "CANDIDATE",df_koi[subset_entry,:koi_pdisposition])
-	        subset_entry = subset_entry[cand_sub]
-	        if length(subset_entry) > 1
-                    println("# Multiple planets found in final cut: ", subset_df[n,1])
-                end
-            end
-            if length(subset_entry) < 1
-                println("# No planets found in final cut: ", subset_df[n,:])
-            end
-            koi_subset[subset_entry] = true
-        end
-        df_koi = df_koi[findall(koi_subset),:]
-        tot_plan = count(x->x, koi_subset)
-    end
+    #             subsubset = findall(x->round(x*10.)==round(subset_df[n,subset_colnum]*10.), df_koi[subset_entry,names(subset_df)[subset_colnum]])
+    #             # println("Extra cut: ", subset_df[n,subset_colnum], " / ", df_koi[subset_entry,col_idx], " = ", subsubset)
+    #             subset_entry = subset_entry[subsubset]
+    #         end
+    #         if length(subset_entry) > 1
+    #             cand_sub = findall(x->x == "CANDIDATE",df_koi[subset_entry,:koi_pdisposition])
+    #             subset_entry = subset_entry[cand_sub]
+    #             if length(subset_entry) > 1
+    #                 println("# Multiple planets found in final cut: ", subset_df[n,1])
+    #             end
+    #         end
+    #         if length(subset_entry) < 1
+    #             println("# No planets found in final cut: ", subset_df[n,:])
+    #         end
+    #         koi_subset[subset_entry] = true
+    #     end
+    #     df_koi = df_koi[findall(koi_subset),:]
+    #     tot_plan = count(x->x, koi_subset)
+    # end
 
     output = KeplerObsCatalog()
     sort!(df_star, (:kepid))
@@ -219,11 +316,12 @@ function setup_actual_planet_candidate_catalog(df_star::DataFrame, df_koi::DataF
     #df_obs = sort!(df_obs, cols=(:kepid))
     df_obs = sort!(df_obs, (:kepid))
 
-    if haskey(sim_param, "koi_subset_csv")
-        tot_plan -= length(df_obs[!,:kepoi_name])
-        println("# Number of planet candidates in subset file with no matching star in table: ", tot_plan)
-    end
+    # if haskey(sim_param, "koi_subset_csv")
+    #     tot_plan -= length(df_obs[!,:kepoi_name])
+    #     println("# Number of planet candidates in subset file with no matching star in table: ", tot_plan)
+    # end
 
+    # Add each KOI planet candidate to Kepler target object
     plid = 0
     for i in 1:length(df_obs[!,:kepoi_name])
         if plid == 0
@@ -256,6 +354,7 @@ function setup_actual_planet_candidate_catalog(df_star::DataFrame, df_koi::DataF
 end
 
 # Two functions below were just for debugging purposes
+# Calculate SNR of every planet in simulated catalog
 function calc_snr_list(cat::KeplerPhysicalCatalog, sim_param::SimParam)
   snrlist = Array{Float64}(undef,0)
   for t in 1:length(cat.target)
@@ -269,6 +368,7 @@ function calc_snr_list(cat::KeplerPhysicalCatalog, sim_param::SimParam)
   snrlist[findall(x->x>7.1,snrlist)]
 end
 
+# Calculate detection probability (assuming planet transits) for every planet in simulated catalog
 function calc_prob_detect_list(cat::KeplerPhysicalCatalog, sim_param::SimParam)
   pdetectlist = Array{Float64}(undef,0)
   for t in 1:length(cat.target)
