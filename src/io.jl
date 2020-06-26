@@ -12,6 +12,7 @@ using FileIO, JLD2
 
 export save_sim_param, save_sim_results, load_sim_param, load_distances, load_summary_stats
 
+# Save SimParam p to JLD2 file
 function save_sim_param(filename::String, p::SimParam)
  local file
  try
@@ -26,6 +27,7 @@ function save_sim_param(filename::String, p::SimParam)
  return true
 end
 
+# Save SimParam p, list of distances, and summary statistics to JLD2 file
 function save_sim_results(filename::String, p::SimParam; distances::Vector{Float64}=Array{Float64}(0), summary_stats::CatalogSummaryStatistics = CatalogSummaryStatistics() )
  local file
  try
@@ -78,7 +80,7 @@ function write_sim_param(file::JLD2.JLDFile, p::SimParam)
    JLD2.write(file,"sim_param_active",p.active)
 end
 
-
+# Load SimParam from JLD2 file
 function load_sim_param(filename::String)
   local jld_data
   try  
@@ -102,6 +104,7 @@ function load_sim_param(filename::String)
   return p
 end
 
+# Load list of distances from JLD2 file
 function load_distances(filename::String)
   local jld_data
   try  
@@ -113,6 +116,7 @@ function load_distances(filename::String)
   return d
 end
 
+# Load summary statistics from JLD2 file
 function load_summary_stats(filename::String)
   local jld_data
   try  

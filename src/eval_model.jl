@@ -1,7 +1,7 @@
 ## ExoplanetsSysSim/src/eval_model.jl
 ## (c) 2015 Eric B. Ford
 
-# This memrely demonstrates how to setup your own function to evaluate a simulated model against an observed catalog
+# This merely demonstrates how to setup your own function to evaluate a simulated model against an observed catalog
 # This code need not be used for any actual calculations
 module TestEvalModel
 export test_eval_model, evaluate_model_scalar_ret

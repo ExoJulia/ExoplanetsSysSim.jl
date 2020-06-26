@@ -30,9 +30,24 @@ period(obs::TransitPlanetObs) = obs.period
 depth(obs::TransitPlanetObs) = obs.depth
 duration(obs::TransitPlanetObs) = obs.duration
 
-semimajor_axis(P::Float64, M::Float64) = (grav_const/(4pi^2)*M*P*P)^(1/3)
-
 period_given_semimajor_axis(a::Float64, M::Float64) = sqrt((4pi^2*a^3)/(grav_const*M))
+
+"""
+    semimajor_axis(P, M)
+    semimajor_axis(ps, id)
+
+Calculate semimajor axis
+
+# Arguments:
+- `P::Float64`: Orbital period (in days)
+- `M::Float64`: Planet mass (in M_sol)
+- `ps::PlanetarySystemAbstract`: Planetary system object
+- `id::Integer`: Planet/orbit index in planetary system object
+
+# Returns:
+Semimajor axis of planet (in AU)
+"""
+semimajor_axis(P::Float64, M::Float64) = (grav_const/(4pi^2)*M*P*P)^(1/3)
 
 function semimajor_axis(ps::PlanetarySystemAbstract, id::Integer)
   M = mass(ps.star) + ps.planet[id].mass   # TODO SCI DETAIL: Replace with Jacobi mass?  Not important unless start including TTVs, even then unlikely to matter
@@ -41,6 +56,19 @@ function semimajor_axis(ps::PlanetarySystemAbstract, id::Integer)
   return semimajor_axis(ps.orbit[id].P,M)
 end
 
+"""
+    calc_transit_depth(t, s, p)
+
+Calculate fractional transit depth of planet transiting host star (including limb darkening)
+
+# Arguments:
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Index of star in Kepler target
+- `p::Integer`: Index of planet in Kepler target
+
+# Returns:
+Fractional transit depth at transit midpoint
+"""
 function calc_transit_depth(t::KeplerTarget, s::Integer, p::Integer)  # WARNING: IMPORTANT: Assumes non-grazing transit
   radius_ratio = t.sys[s].planet[p].radius/t.sys[s].star.radius
   #b = calc_impact_parameter(t.sys[s].planet, p) # If limb darkening should know about which chord the planet takes set b to impact parameter, rather than 0.0.
@@ -48,25 +76,87 @@ function calc_transit_depth(t::KeplerTarget, s::Integer, p::Integer)  # WARNING:
   depth *=  flux(t.sys[s].star)/flux(t)                      # Flux ratio accounts for dilution
 end
 
+"""
+    calc_transit_duration_central_circ_small_angle_approx(ps, pl)
+    calc_transit_duration_central_circ_small_angle_approx(t, s, p)
+
+Calculate transit duration of planet across host star disk if it transits across the center of the stellar disk assuming a circular orbit using the small angle approximation
+
+# Arguments:
+- `ps::PlanetarySystemAbstract`: Planetary system object
+- `pl::Integer`: Planet/orbit index in planetary system object
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Index of star in Kepler target
+- `p::Integer`: Index of planet in Kepler target
+
+# Returns:
+Transit duration (in days) if planet transits across center of stellar disk
+"""
 function calc_transit_duration_central_circ_small_angle_approx(ps::PlanetarySystemAbstract, pl::Integer)
   duration = rsol_in_au*ps.star.radius * ps.orbit[pl].P /(pi*semimajor_axis(ps,pl) )
 end
 
 calc_transit_duration_central_circ_small_angle_approx(t::KeplerTarget, s::Integer, p::Integer) = calc_transit_duration_central_circ_small_angle_approx(t.sys[s],p)
 
+"""
+    calc_transit_duration_central_circ_with_arcsin(ps, pl)
+    calc_transit_duration_central_circ_with_arcsin(t, s, p)
+
+Calculate transit duration of planet across host star disk if it transits across the center of the stellar disk assuming a circular orbit without the small angle approximation
+
+# Arguments:
+- `ps::PlanetarySystemAbstract`: Planetary system object
+- `pl::Integer`: Planet/orbit index in planetary system object
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Index of star in Kepler target
+- `p::Integer`: Index of planet in Kepler target
+
+# Returns:
+Transit duration (in days) if planet transits across center of stellar disk
+"""
 function calc_transit_duration_central_circ_with_arcsin(ps::PlanetarySystemAbstract, pl::Integer)
   asin_arg = rsol_in_au*ps.star.radius/semimajor_axis(ps,pl)
   duration = ps.orbit[pl].P/pi * (asin_arg < 1.0 ? asin(asin_arg) : 1.0)
 end
 calc_transit_duration_central_circ_with_arcsin(t::KeplerTarget, s::Integer, p::Integer) = calc_transit_duration_central_circ_with_arcsin(t.sys[s],p)
 
+"""
+    calc_transit_duration_central_circ(ps, pl)
+    calc_transit_duration_central_circ(t, s, p)
 
+Wrapper function to calculate transit duration of planet across host star disk if it transits across the center of the stellar disk assuming a circular orbit
+
+# Arguments:
+- `ps::PlanetarySystemAbstract`: Planetary system object
+- `pl::Integer`: Planet/orbit index in planetary system object
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Index of star in Kepler target
+- `p::Integer`: Index of planet in Kepler target
+
+# Returns:
+Transit duration (in days) if planet transits across center of stellar disk
+"""
 #calc_transit_duration_central_circ(ps::PlanetarySystemAbstract, pl::Integer) = calc_transit_duration_central_circ_small_angle_approx(ps,pl)
 calc_transit_duration_central_circ(ps::PlanetarySystemAbstract, pl::Integer) = calc_transit_duration_central_circ_with_arcsin(ps,pl)
 
 calc_transit_duration_central_circ(t::KeplerTarget, s::Integer, p::Integer) = calc_transit_duration_central_circ(t.sys[s],p)
 
+"""
+    calc_transit_duration_central_small_angle_approx(ps, pl)
+    calc_transit_duration_central_small_angle_approx(t, s, p)
 
+Calculate transit duration of planet across host star disk if it transits across the center of the stellar disk using the small angle approximation
+
+# Arguments:
+- `ps::PlanetarySystemAbstract`: Planetary system object
+- `pl::Integer`: Planet/orbit index in planetary system object
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Index of star in Kepler target
+- `p::Integer`: Index of planet in Kepler target
+
+# Returns:
+Transit duration (in days) if planet transits across center of stellar disk
+"""
 function calc_transit_duration_central_small_angle_approx(ps::PlanetarySystemAbstract, pl::Integer)
   ecc = ps.orbit[pl].ecc
   sqrt_one_minus_ecc_sq = sqrt((1+ecc)*(1-ecc))
@@ -76,7 +166,22 @@ function calc_transit_duration_central_small_angle_approx(ps::PlanetarySystemAbs
 end
 calc_transit_duration_central_small_angle_approx(t::KeplerTarget, s::Integer, p::Integer) = calc_transit_duration_central_small_angle_approx(t.sys[s],p)
 
-# It seems above should be good enough, but we can try one of the following just to eliminate potential approximation errors.
+"""
+    calc_transit_duration_central_winn2010(ps, pl)
+    calc_transit_duration_central_winn2010(t, s, p)
+
+Calculate transit duration of planet across host star disk if it transits across the center of the stellar disk using the formulation from Winn (2010)
+
+# Arguments:
+- `ps::PlanetarySystemAbstract`: Planetary system object
+- `pl::Integer`: Planet/orbit index in planetary system object
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Index of star in Kepler target
+- `p::Integer`: Index of planet in Kepler target
+
+# Returns:
+Transit duration (in days) if planet transits across center of stellar disk
+"""
 function calc_transit_duration_central_winn2010(ps::PlanetarySystemAbstract, pl::Integer)
   ecc = ps.orbit[pl].ecc
   sqrt_one_minus_ecc_sq = sqrt((1+ecc)*(1-ecc))
@@ -89,6 +194,22 @@ function calc_transit_duration_central_winn2010(ps::PlanetarySystemAbstract, pl:
 end
 calc_transit_duration_central_winn2010(t::KeplerTarget, s::Integer, p::Integer) = calc_transit_duration_central_winn2010(t.sys[s],p)
 
+"""
+    calc_transit_duration_central_kipping2010(ps, pl)
+    calc_transit_duration_central_kipping2010(t, s, p)
+
+Calculate transit duration of planet across host star disk if it transits across the center of the stellar disk using the formulation from Kipping (2010)
+
+# Arguments:
+- `ps::PlanetarySystemAbstract`: Planetary system object
+- `pl::Integer`: Planet/orbit index in planetary system object
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Index of star in Kepler target
+- `p::Integer`: Index of planet in Kepler target
+
+# Returns:
+Transit duration (in days) if planet transits across center of stellar disk
+"""
 function calc_transit_duration_central_kipping2010(ps::PlanetarySystemAbstract, pl::Integer)
   ecc = ps.orbit[pl].ecc
   sqrt_one_minus_ecc_sq = sqrt((1+ecc)*(1-ecc))
@@ -101,6 +222,22 @@ function calc_transit_duration_central_kipping2010(ps::PlanetarySystemAbstract, 
 end
 calc_transit_duration_central_kipping2010(t::KeplerTarget, s::Integer, p::Integer) = calc_transit_duration_central_kipping2010(t.sys[s],p)
 
+"""
+    calc_transit_duration_central(ps, pl)
+    calc_transit_duration_central(t, s, p)
+
+Wrapper function to calculate transit duration of planet across host star disk if it transits across the center of the stellar disk
+
+# Arguments:
+- `ps::PlanetarySystemAbstract`: Planetary system object
+- `pl::Integer`: Planet/orbit index in planetary system object
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Index of star in Kepler target
+- `p::Integer`: Index of planet in Kepler target
+
+# Returns:
+Transit duration (in days) if planet transits across center of stellar disk
+"""
 #calc_transit_duration_central(ps::PlanetarySystemAbstract, pl::Integer) = calc_transit_duration_central_small_angle_approx(ps,pl)
 #calc_transit_duration_central(ps::PlanetarySystemAbstract, pl::Integer) = calc_transit_duration_central_winn2010(ps,pl)
 calc_transit_duration_central(ps::PlanetarySystemAbstract, pl::Integer) = calc_transit_duration_central_kipping2010(ps,pl)
@@ -108,6 +245,19 @@ calc_transit_duration_central(ps::PlanetarySystemAbstract, pl::Integer) = calc_t
 calc_transit_duration_central(t::KeplerTarget, s::Integer, p::Integer) = calc_transit_duration_central(t.sys[s],p)
 calc_transit_duration_eff_central(t::KeplerTarget, s::Integer, p::Integer) = calc_transit_duration_central(t.sys[s],p)
 
+"""
+    calc_transit_duration_factor_for_impact_parameter_b(b, p)
+
+Calculate scaling factor to convert central transit duration to transit duration given an orbit with impact parameter b
+NOTE: Used for single observations of transit duration
+
+# Arguments:
+- `b::Real`: Impact parameter
+- `p::Real`: Planet-to-star radius ratio
+
+# Returns:
+Transit duration scaling factor
+"""
 function calc_transit_duration_factor_for_impact_parameter_b(b::T, p::T)  where T <:Real
     @assert(zero(b)<=b)         # b = Impact Parameter
     @assert(zero(p)<=p<one(p))  # p = R_p/R_star
@@ -118,6 +268,19 @@ function calc_transit_duration_factor_for_impact_parameter_b(b::T, p::T)  where 
     end
 end
 
+"""
+    calc_transit_duration_eff_factor_for_impact_parameter_b(b, p)
+
+Calculate scaling factor to convert central transit duration to transit duration given an orbit with impact parameter b
+NOTE: Used for single observations of effective transit duration for use in SNR calculations.
+
+# Arguments:
+- `b::Real`: Impact parameter
+- `p::Real`: Planet-to-star radius ratio
+
+# Returns:
+Transit duration scaling factor
+"""
 function calc_transit_duration_eff_factor_for_impact_parameter_b(b::T, p::T)  where T <:Real
   @assert(zero(b)<=b)         # b = Impact Parameter
   @assert(zero(p)<=p<one(p))  # p = R_p/R_star
@@ -136,7 +299,19 @@ function calc_transit_duration_eff_factor_for_impact_parameter_b(b::T, p::T)  wh
     return duration_ratio
 end
 
+"""
+    calc_effective_transit_duration_factor_for_impact_parameter_b(b, p)
 
+Calculate scaling factor to convert central transit duration to transit duration given an orbit with impact parameter b
+NOTE: Used for sky-averaging observations where multiple transit durations are sampled for different values of b.
+
+# Arguments:
+- `b::Real`: Impact parameter
+- `p::Real`: Planet-to-star radius ratio
+
+# Returns:
+Transit duration scaling factor
+"""
 function calc_effective_transit_duration_factor_for_impact_parameter_b(b::T, p::T)  where T <:Real
   @assert(zero(b)<=b)         # b = Impact Parameter
   @assert(zero(p)<=p<one(p))  # p = R_p/R_star
@@ -164,9 +339,19 @@ function calc_effective_transit_duration_factor_for_impact_parameter_b(b::T, p::
 end
 
 
-# How SNR is affected for grazing transits due to not all of planet blocking starlight at mid-transit.
-# Assumes uniform surface brightness star
-# Expression comes from Eqn 14 of http://mathworld.wolfram.com/Circle-CircleIntersection.html
+"""
+    calc_depth_correction_for_grazing_transit(b, p)
+
+Calculate scaling factor to correct transit depth to account for grazing transits when only part of the planet disk blocks starlight at mid-transit. Source: Eqn 14 of http://mathworld.wolfram.com/Circle-CircleIntersection.html
+NOTE: Assumes uniform surface brightness star
+
+# Arguments:
+- `b::Real`: Impact parameter
+- `p::Real`: Planet-to-star radius ratio
+
+# Returns:
+Transit depth scaling factor
+"""
 function calc_depth_correction_for_grazing_transit(b::T, p::T)  where T <:Real
   @assert(zero(b)<=b)         # b = Impact Parameter
   @assert(zero(p)<=p<one(p))  # p = R_p/R_star
@@ -186,6 +371,22 @@ end
 
 # Transit durations to be used for observations of transit duration
 
+"""
+    calc_transit_duration_small_angle_approx(ps, pl)
+    calc_transit_duration_small_angle_approx(t, s, p)
+
+Calculate transit duration of planet across host star disk using the small angle approximation
+
+# Arguments:
+- `ps::PlanetarySystemAbstract`: Planetary system object
+- `pl::Integer`: Planet/orbit index in planetary system object
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Index of star in Kepler target
+- `p::Integer`: Index of planet in Kepler target
+
+# Returns:
+Transit duration (in days)
+"""
 function calc_transit_duration_small_angle_approx(ps::PlanetarySystemAbstract, pl::Integer)
   a = semimajor_axis(ps,pl)
   @assert a>=zero(a)
@@ -209,6 +410,22 @@ function calc_transit_duration_small_angle_approx(ps::PlanetarySystemAbstract, p
 end
 calc_transit_duration_small_angle_approx(t::KeplerTarget, s::Integer, p::Integer ) = calc_transit_duration_small_angle_approx(t.sys[s],p)
 
+"""
+    calc_transit_duration_central_winn2010(ps, pl)
+    calc_transit_duration_central_winn2010(t, s, p)
+
+Calculate transit duration of planet across host star disk using the formulation from Winn (2010)
+
+# Arguments:
+- `ps::PlanetarySystemAbstract`: Planetary system object
+- `pl::Integer`: Planet/orbit index in planetary system object
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Index of star in Kepler target
+- `p::Integer`: Index of planet in Kepler target
+
+# Returns:
+Transit duration (in days)
+"""
 function calc_transit_duration_winn2010(ps::PlanetarySystemAbstract, pl::Integer)
   a = semimajor_axis(ps,pl)
   @assert a>=zero(a)
@@ -237,6 +454,22 @@ function calc_transit_duration_winn2010(ps::PlanetarySystemAbstract, pl::Integer
 end
 calc_transit_duration_winn2010(t::KeplerTarget, s::Integer, p::Integer ) = calc_transit_duration_winn2010(t.sys[s],p)
 
+"""
+    calc_transit_duration_central_kipping2010(ps, pl)
+    calc_transit_duration_central_kipping2010(t, s, p)
+
+Calculate transit duration of planet across host star disk using the formulation from Kipping (2010)
+
+# Arguments:
+- `ps::PlanetarySystemAbstract`: Planetary system object
+- `pl::Integer`: Planet/orbit index in planetary system object
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Index of star in Kepler target
+- `p::Integer`: Index of planet in Kepler target
+
+# Returns:
+Transit duration (in days)
+"""
 function calc_transit_duration_kipping2010(ps::PlanetarySystemAbstract, pl::Integer)
   a = semimajor_axis(ps,pl)
   @assert a>=zero(a)
@@ -265,6 +498,22 @@ function calc_transit_duration_kipping2010(ps::PlanetarySystemAbstract, pl::Inte
 end
 calc_transit_duration_kipping2010(t::KeplerTarget, s::Integer, p::Integer ) = calc_transit_duration_kipping2010(t.sys[s],p)
 
+"""
+    calc_transit_duration(ps, pl)
+    calc_transit_duration(t, s, p)
+
+Wrapper function to calculate transit duration of planet across host star disk
+
+# Arguments:
+- `ps::PlanetarySystemAbstract`: Planetary system object
+- `pl::Integer`: Planet/orbit index in planetary system object
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Index of star in Kepler target
+- `p::Integer`: Index of planet in Kepler target
+
+# Returns:
+Transit duration (in days)
+"""
 #calc_transit_duration(ps::PlanetarySystemAbstract, pl::Integer) = calc_transit_duration_small_angle_approx(ps,pl)
 #calc_transit_duration(ps::PlanetarySystemAbstract, pl::Integer) = calc_transit_duration_winn2010(ps,pl)
 calc_transit_duration(ps::PlanetarySystemAbstract, pl::Integer) = calc_transit_duration_kipping2010(ps,pl)
@@ -272,6 +521,23 @@ calc_transit_duration(t::KeplerTarget, s::Integer, p::Integer ) = calc_transit_d
 
 # Effective transit durations to be used for SNR calculations
 
+"""
+    calc_transit_duration_eff_small_angle_approx(ps, pl)
+    calc_transit_duration_eff_small_angle_approx(t, s, p)
+
+Calculate effective transit duration of planet across host star disk using the small angle approximation
+NOTE: To be used for SNR calculations
+
+# Arguments:
+- `ps::PlanetarySystemAbstract`: Planetary system object
+- `pl::Integer`: Planet/orbit index in planetary system object
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Index of star in Kepler target
+- `p::Integer`: Index of planet in Kepler target
+
+# Returns:
+Effective transit duration (in days)
+"""
 function calc_transit_duration_eff_small_angle_approx(ps::PlanetarySystemAbstract, pl::Integer)
   a = semimajor_axis(ps,pl)
   @assert a>=zero(a)
@@ -295,6 +561,23 @@ function calc_transit_duration_eff_small_angle_approx(ps::PlanetarySystemAbstrac
 end
 calc_transit_duration_eff_small_angle_approx(t::KeplerTarget, s::Integer, p::Integer ) = calc_transit_duration_eff_small_angle_approx(t.sys[s],p)
 
+"""
+    calc_transit_duration_eff_winn2010(ps, pl)
+    calc_transit_duration_eff_winn2010(t, s, p)
+
+Calculate effective transit duration of planet across host star disk using the formulation from Winn (2010)
+NOTE: To be used for SNR calculations
+
+# Arguments:
+- `ps::PlanetarySystemAbstract`: Planetary system object
+- `pl::Integer`: Planet/orbit index in planetary system object
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Index of star in Kepler target
+- `p::Integer`: Index of planet in Kepler target
+
+# Returns:
+Effective transit duration (in days)
+"""
 function calc_transit_duration_eff_winn2010(ps::PlanetarySystemAbstract, pl::Integer)
   a = semimajor_axis(ps,pl)
   @assert a>=zero(a)
@@ -307,7 +590,7 @@ function calc_transit_duration_eff_winn2010(ps::PlanetarySystemAbstract, pl::Int
   if b>one(b)+size_ratio
      return zero(b)
   end
-  duration_central_circ = calc_transit_duration_ecentral_circ(ps,pl)
+  duration_central_circ = calc_transit_duration_central_circ(ps,pl)
   arcsin_circ_central = pi/ps.orbit[pl].P*duration_central_circ
 
   one_plus_e_sin_w = 1+ecc*sin(ps.orbit[pl].omega)
@@ -323,6 +606,23 @@ function calc_transit_duration_eff_winn2010(ps::PlanetarySystemAbstract, pl::Int
 end
 calc_transit_duration_eff_winn2010(t::KeplerTarget, s::Integer, p::Integer ) = calc_transit_duration_eff_winn2010(t.sys[s],p)
 
+"""
+    calc_transit_duration_eff_kipping2010(ps, pl)
+    calc_transit_duration_eff_kipping2010(t, s, p)
+
+Calculate effective transit duration of planet across host star disk using the formulation from Kipping (2010)
+NOTE: To be used for SNR calculations
+
+# Arguments:
+- `ps::PlanetarySystemAbstract`: Planetary system object
+- `pl::Integer`: Planet/orbit index in planetary system object
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Index of star in Kepler target
+- `p::Integer`: Index of planet in Kepler target
+
+# Returns:
+Effective transit duration (in days)
+"""
 function calc_transit_duration_eff_kipping2010(ps::PlanetarySystemAbstract, pl::Integer)
   a = semimajor_axis(ps,pl)
   @assert a>=zero(a)
@@ -351,18 +651,59 @@ function calc_transit_duration_eff_kipping2010(ps::PlanetarySystemAbstract, pl::
 end
 calc_transit_duration_eff_kipping2010(t::KeplerTarget, s::Integer, p::Integer ) = calc_transit_duration_eff_kipping2010(t.sys[s],p)
 
+"""
+    calc_transit_duration_eff(ps, pl)
+    calc_transit_duration_eff(t, s, p)
+
+Wrapper function to calculate effective transit duration of planet across host star disk to be used for SNR calculations
+
+# Arguments:
+- `ps::PlanetarySystemAbstract`: Planetary system object
+- `pl::Integer`: Planet/orbit index in planetary system object
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Index of star in Kepler target
+- `p::Integer`: Index of planet in Kepler target
+
+# Returns:
+Effective transit duration (in days)
+"""
 #calc_transit_duration_eff(ps::PlanetarySystemAbstract, pl::Integer) = calc_transit_duration_eff_small_angle_approx(ps,pl)
 #calc_transit_duration_eff(ps::PlanetarySystemAbstract, pl::Integer) = calc_transit_duration_eff_winn2010(ps,pl)
 calc_transit_duration_eff(ps::PlanetarySystemAbstract, pl::Integer) = calc_transit_duration_eff_kipping2010(ps,pl)
 calc_transit_duration_eff(t::KeplerTarget, s::Integer, p::Integer ) = calc_transit_duration_eff(t.sys[s],p)
 
+"""
+    calc_transit_duration_eff(t, s, p, sim_param)
 
+Calculates (expected) number of transits observed for planet
+
+# Arguments:
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Index of star in Kepler target
+- `p::Integer`: Index of planet in Kepler target
+- `sim_param::SimParam`: Simulation parameter object
+
+# Returns:
+Effective (expected) number of transits
+"""
 function calc_expected_num_transits(t::KeplerTarget, s::Integer, p::Integer, sim_param::SimParam)
  period = t.sys[s].orbit[p].P
  exp_num_transits = t.duty_cycle * t.data_span/period
  return exp_num_transits
 end
 
+"""
+    get_durations_searched_Kepler(period, duration)
+
+Returns appropriate transit duration for use with 1-sigma depth function (or CDPP) given the range of transit durations searched by the Kepler pipeline.
+
+# Arguments: 
+- `period::Float64`: Orbital period (in days)
+- `duration::Float64`: Transit duration (in days)
+
+# Returns:
+Valid transit duration searched by Kepler pipeline that is closest to the actual transit duration input to the function.
+"""
 #function get_legal_durations(period::Float64,duration::Float64)
 function get_durations_searched_Kepler(period::Float64,duration::Float64)
   num_dur = length(cdpp_durations) # 14
@@ -414,6 +755,20 @@ end
 KeplerTargetObs(n::Integer) = KeplerTargetObs( fill(TransitPlanetObs(),n), fill(TransitPlanetObs(),n), ObservedSystemDetectionProbsEmpty(),  falses(has_sc_bit_array_size), StarObs(0.0,0.0,0) )
 num_planets(t::KeplerTargetObs) = length(t.obs)
 
+"""
+    calc_target_obs_sky_ave(t, sim_param)
+
+Simulate observation of Kepler target (with associated planets) and return observed quantities and detection probabilities of all planets averaging over all viewing angles.
+
+# Arguments:
+- `t::KeplerTarget`: Kepler target object
+- `sim_param::SimParam`: Simulation parameter object, must contain the following values:
+    - max_tranets_in_sys: Maximum number of transiting planets per Kepler target
+    - transit_noise_model: Function to use for simulating noise in the observed properties of the transiting planets
+
+# Returns:
+Kepler observable object containing observed properties and detection probabilities for every planet
+"""
 function calc_target_obs_sky_ave(t::KeplerTarget, sim_param::SimParam)
    max_tranets_in_sys = get_int(sim_param,"max_tranets_in_sys")
    transit_noise_model = get_function(sim_param,"transit_noise_model")
@@ -516,7 +871,20 @@ function calc_target_obs_sky_ave(t::KeplerTarget, sim_param::SimParam)
   return KeplerTargetObs(obs, sigma, sdp_target, has_no_sc, star_obs )
 end
 
+"""
+    calc_target_obs_single_obs(t, sim_param)
 
+Simulate observation of Kepler target (with associated planets) and return observed quantities and detection probabilities of all planets assuming a single viewpoint.
+
+# Arguments:
+- `t::KeplerTarget`: Kepler target object
+- `sim_param::SimParam`: Simulation parameter object, must contain the following values:
+    - max_tranets_in_sys: Maximum number of transiting planets per Kepler target
+    - transit_noise_model: Function to use for simulating noise in the observed properties of the transiting planets
+
+# Returns:
+Kepler observable object containing observed properties and detection probabilities for every planet
+"""
 function calc_target_obs_single_obs(t::KeplerTarget, sim_param::SimParam)
   # max_tranets_in_sys = get_int(sim_param,"max_tranets_in_sys")
    transit_noise_model = get_function(sim_param,"transit_noise_model")
@@ -612,6 +980,25 @@ end
 
 randtn() = rand(truncated(Normal(0.0,1.0),-0.999,0.999))
 
+"""
+    transit_noise_model_no_noise(t, s, p, depth, duration, snr, num_tr, b = 0.0)
+
+Transit noise model that assumes no additional noise introduced to observations.
+
+# Arguments:
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Index of star in Kepler target
+- `p::Integer`: Index of planet in Kepler target
+- `depth::Float64`: (Fractional) transit depth
+- `duration::Float64`: Transit duration (in days)
+- `snr::Float64`: Expected multiple event statistic (signal-to-noise ratio) of transit
+- `num_tr::Float64`: Expected number of transits observed
+- `b::Float64 = 0.0`: Impact parameter of planet's orbit
+
+# Returns
+- TransitPlanetObs object containing simulated period, t0, transit depth, and transit duration
+- TransitPlanetObs object containing simulated uncertainties for period, t0, transit depth, and transit duration
+"""
 function transit_noise_model_no_noise(t::KeplerTarget, s::Integer, p::Integer, depth::Float64, duration::Float64, snr::Float64, num_tr::Float64; b::Float64 = 0.0)
   period = t.sys[s].orbit[p].P
   t0 = period*rand()    # WARNING: Not being calculated from orbit
@@ -624,6 +1011,29 @@ function transit_noise_model_no_noise(t::KeplerTarget, s::Integer, p::Integer, d
   return obs, sigma
 end
 
+"""
+    transit_noise_model_no_noise(t, s, p, depth, duration, snr, num_tr, b = 0.0)
+
+Transit noise model that assumes fixed amounts of uncertainty on observed transit properties. Uncertainties are as follows: 
+- Period = 10^-6
+- t0 = 10^-4
+- Depth = 10^-1
+- Duration = 10^-2
+
+# Arguments:
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Index of star in Kepler target
+- `p::Integer`: Index of planet in Kepler target
+- `depth::Float64`: (Fractional) transit depth
+- `duration::Float64`: Transit duration (in days)
+- `snr::Float64`: Expected multiple event statistic (signal-to-noise ratio) of transit
+- `num_tr::Float64`: Expected number of transits observed
+- `b::Float64 = 0.0`: Impact parameter of planet's orbit
+
+# Returns
+- TransitPlanetObs object containing simulated period, t0, transit depth, and transit duration
+- TransitPlanetObs object containing simulated uncertainties for period, t0, transit depth, and transit duration
+"""
 function transit_noise_model_fixed_noise(t::KeplerTarget, s::Integer, p::Integer, depth::Float64, duration::Float64, snr::Float64, num_tr::Float64; b::Float64 = 0.0)
   period = t.sys[s].orbit[p].P
   t0 = period*rand()    # WARNING: Not being calculated from orbit
@@ -657,6 +1067,25 @@ function make_matrix_pos_def(A::Union{AbstractArray{T1,2},Symmetric{AbstractArra
     end
 end
 
+"""
+    transit_noise_model_diagonal(t, s, p, depth, duration, snr, num_tr, b = calc_impact_parameter(t.sys[s], p))
+
+Transit noise model that uses the Fisher information matrix formulation assuming finite integration from Price & Rogers (2014).
+
+# Arguments:
+- `t::KeplerTarget`: Kepler target object
+- `s::Integer`: Index of star in Kepler target
+- `p::Integer`: Index of planet in Kepler target
+- `depth::Float64`: (Fractional) transit depth
+- `duration::Float64`: Transit duration (in days)
+- `snr::Float64`: Expected multiple event statistic (signal-to-noise ratio) of transit
+- `num_tr::Float64`: Expected number of transits observed
+- `b::Float64 = calc_impact_parameter(t.sys[s], p)`: Impact parameter of planet's orbit
+
+# Returns
+- TransitPlanetObs object containing simulated period, t0, transit depth, and transit duration
+- TransitPlanetObs object containing simulated uncertainties for period, t0, transit depth, and transit duration
+"""
 function transit_noise_model_diagonal(t::KeplerTarget, s::Integer, p::Integer, depth::Float64, duration::Float64, snr::Float64, num_tr::Float64; b::Float64 = calc_impact_parameter(t.sys[s],p) )
     transit_noise_model_price_rogers(t, s, p, depth, duration, snr, num_tr; b=b, diagonal=true )
 end
