@@ -1,11 +1,9 @@
 # All accepted parameters are listed
 # To use default parameters, add a '#' character at the beginning of the line
 
-#stellar_catalog = "q1_q16_christiansen.jld" # data file for stellar catalog [DEFAULT = "q1_q16_christiansen.jld"]
 stellar_catalog = "tess_stellar.csv"
-#koi_catalog = "q1_q16_koi_cand.csv"          # data file for KOI catalog [NO DEFAULT VALUE]
 koi_catalog = "tois_adapted.csv"
-osd_file = "inputs/dr25fgk_relaxcut_osds.jld2"
+#osd_file = "inputs/dr25fgk_relaxcut_osds.jld2"
 
 num_targ_sim = 1000                       # number of planetary systems in simulated catalogs
                                              # [DEFAULT = same size as observed catalog]

@@ -6,6 +6,8 @@ module EvalSysSimModel
 export setup, get_param_vector, get_ss_obs
 export gen_data, calc_summary_stats, calc_distance, is_valid_uniform, is_valid_beta, is_valid_dirichlet, normalize_dirch
 using ExoplanetsSysSim
+using CSV
+using DataFrames
 using ApproximateBayesianComputing
 const ABC = ApproximateBayesianComputing
 include(joinpath(abspath(joinpath(dirname(Base.find_package("ExoplanetsSysSim")),"..")),"examples","tess", "tess_binrates_func.jl"))
@@ -86,6 +88,17 @@ function calc_distance(sum_stat_obs::CatalogSummaryStatistics,sum_stat_sim::Cata
     num_available = length(dist1)
     num_to_use = n>0 ? min(n,num_available) : num_available
     return calc_scalar_distance(dist1[1:num_to_use])
+end
+
+function read_star_table_tess()
+    global sim_param_closure
+    stlr = DataFrame()
+    for i=1:27
+        fname="tesstargets/TESS_targets_S" * lpad(i, 3, "0") * ".csv" # this is specific to my machine!
+        stlr = vcat(stlr, CSV.read(fname))
+    end
+    add_param_active(sim_param_closure, "read_stellar_catalog", stlr)
+    sim_param_closure
 end
 
 function setup(prior_choice::String, bin_size_factor::Float64)

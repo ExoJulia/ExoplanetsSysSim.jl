@@ -465,7 +465,7 @@ function setup_dr25(filename::String; force_reread::Bool = false)
   if occursin(r".jld2$",filename)
   try 
     data = load(filename)
-    df = data["stellar_catalog"]
+    df = data["q1q17"]
     #usable::Array{Int64,1} = data["stellar_catalog_usable"]
     Core.typeassert(df,DataFrame)
     StellarTable.set_star_table(df)

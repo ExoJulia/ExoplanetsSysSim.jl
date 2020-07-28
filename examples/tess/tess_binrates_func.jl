@@ -541,19 +541,19 @@ function calc_summary_stats_obs_binned_rates(cat_obs::ObsCatalog, param::SimPara
 
   max_tranets_in_sys = get_int(param,"max_tranets_in_sys")    # Demo that simulation parameters can specify how to evalute models, too
   @assert max_tranets_in_sys >= 1
-  idx_tranets = findall(x::TargetObs-> length(x.obs) > 0, cat_obs.target)::Array{Int64,1}             # Find indices of systems with at least 1 tranet = potentially detectable transiting planet
+  idx_tranets = findall(x::TESSTargetObs-> length(x.obs) > 0, cat_obs.target)::Array{Int64,1}             # Find indices of systems with at least 1 tranet = potentially detectable transiting planet
 
   # Count total number of tranets and compile indices for N-tranet systems
   num_tranets = 0
   idx_n_tranets = Vector{Int64}[ Int64[] for m = 1:max_tranets_in_sys]
   for n in 1:max_tranets_in_sys-1
-    idx_n_tranets[n] = findall(x::TargetObs-> length(x.obs) == n, cat_obs.target[idx_tranets] )
+    idx_n_tranets[n] = findall(x::TESSTargetObs-> length(x.obs) == n, cat_obs.target[idx_tranets] )
     num_tranets += n*length(idx_n_tranets[n])
   end
-  idx_n_tranets[max_tranets_in_sys] = findall(x::TargetObs-> length(x.obs) >= max_tranets_in_sys, cat_obs.target[idx_tranets] )
+  idx_n_tranets[max_tranets_in_sys] = findall(x::TESSTargetObs-> length(x.obs) >= max_tranets_in_sys, cat_obs.target[idx_tranets] )
 
   num_tranets += max_tranets_in_sys*length(idx_n_tranets[max_tranets_in_sys])  # WARNING: this means we need to ignore planets w/ indices > max_tranets_in_sys
-  if ( length( findall(x::TargetObs-> length(x.obs) > max_tranets_in_sys, cat_obs.target[idx_tranets] ) ) > 0)   # Make sure max_tranets_in_sys is at least big enough for observed systems
+  if ( length( findall(x::TESSTargetObs-> length(x.obs) > max_tranets_in_sys, cat_obs.target[idx_tranets] ) ) > 0)   # Make sure max_tranets_in_sys is at least big enough for observed systems
     warn("Observational data has more transiting planets in one systems than max_tranets_in_sys allows.")
   end
   num_tranets  = convert(Int64,num_tranets)            # TODO OPT: Figure out why isn't this already an Int.  I may be doing something that prevents some optimizations
@@ -799,7 +799,7 @@ end
 ## cnt_bin & np_bin (inverse detection & simple bayesian)
 function cnt_np_bin(cat_obs::ObsCatalog, param::SimParam, verbose::Bool = true)
     num_targ = ExoplanetsSysSim.StellarTable.num_usable_in_star_table()
-    idx_tranets = findall(x::TargetObs-> length(x.obs) > 0, cat_obs.target)::Array{Int64,1}
+    idx_tranets = findall(x::TESSTargetObs-> length(x.obs) > 0, cat_obs.target)::Array{Int64,1}
 
     limitP::Array{Float64,1} = get_any(param, "p_lim_arr", Array{Float64,1})
     limitRp::Array{Float64,1} = get_any(param, "r_lim_arr", Array{Float64,1})

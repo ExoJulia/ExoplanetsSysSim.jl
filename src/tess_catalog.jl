@@ -1,22 +1,13 @@
 ## ExoplanetsSysSim/src/tess_catalog.jl
-## (c) 2015 Eric B. Ford
+## (c) 2020 Aditya Sengupta?
 
-#using ExoplanetsSysSim
 using DataFrames
-#using DataArrays
 using CSV
-#using JLD
-#using JLD2
 using FileIO
-
-#if VERSION >= v"0.5-"
-#  import Compat: UTF8String, ASCIIString
-#end
 
 mutable struct TESSPhysicalCatalog
   target::Array{TessTarget,1}
 end
-#TESSPhysicalCatalog() = TESSPhysicalCatalog([])
 
 mutable struct TESSObsCatalog
   target::Array{TESSTargetObs,1}
@@ -110,7 +101,6 @@ function observe_tess_targets(calc_target_obs::Function, input::TESSPhysicalCata
   if length(output.target) < num_targets_sim_pass_one
      output.target = Array{TESSTargetObs}(undef,num_targets_sim_pass_one)
   end
-  #output.target = Array{TESSTargetObs}(undef,length(input.target) )  # Replaced to reduce memory allocation
   map!(x::TESSTarget->calc_target_obs(x,sim_param)::TESSTargetObs, output.target, input.target)
   resize!(output.target,length(input.target))
   return output
@@ -187,26 +177,26 @@ function simulated_read_tess_observations(sim_param::SimParam )
 end
 
 """
-    read_koi_catalog(sim_param, force_reread=false)
+    read_toi_catalog(sim_param, force_reread=false)
 
 Wrapper function to read TESS Object of Interest (TOI) catalog given SimParam
 
 # Arguments:
 - `sim_param::SimParam`: Simulation parameter object; this function uses the following parameters from the SimParam object:
-  - koi_catalog: String filename of TESS Object of Interest catalog (if not provided, defaults to "q1_q17_dr25_koi.csv"
+  - toi_catalog: String filename of TESS Object of Interest catalog
 - `force_reread::Bool`: Should the file be read in even if a DataFrame of the TOIs already exists in workspace?
 
 # Returns:
 - Dataframe of TOI objects (and their respective properties).
 - Vector of booleans indicating which TOIs  were designated as planet candidates by the TESS pipeline and have a valid observed radius ratio and period (necessary for detection probability calculation).
 """
-function read_koi_catalog(sim_param::SimParam, force_reread::Bool = false)
-    filename = convert(String,joinpath(dirname(pathof(ExoplanetsSysSim)),"..", "data", convert(String,get(sim_param,"koi_catalog","q1_q17_dr25_koi.csv")) ) )
-    return read_koi_catalog(filename, force_reread)
+function read_toi_catalog(sim_param::SimParam, force_reread::Bool = false)
+    filename = convert(String,joinpath(dirname(pathof(ExoplanetsSysSim)),"..", "data", convert(String,get(sim_param,"toi_catalog")) ) )
+    return read_toi_catalog(filename, force_reread)
 end
 
 """
-    read_koi_catalog(filename, force_reread=false)
+    read_toi_catalog(filename, force_reread=false)
 
 Function to read TESS Object of Interest (TOI) catalog given filename string.
 
@@ -216,86 +206,86 @@ Function to read TESS Object of Interest (TOI) catalog given filename string.
 
 # Returns:
 - Dataframe of TOI objects (and their respective properties).
-- Vector of booleans indicating which TOIs  were designated as planet candidates by the TESS pipeline and have a valid observed radius ratio and period (necessary for detection probability calculation).
+- Vector of booleans indicating which TOIs were designated as planet candidates by the TESS pipeline and have a valid observed radius ratio and period (necessary for detection probability calculation).
 """
-function read_koi_catalog(filename::String, force_reread::Bool = false)
+function read_toi_catalog(filename::String, force_reread::Bool = false)
     local df, usable
 
     if occursin(r".jld2$",filename) && !force_reread
         try
             data = load(filename)
-            df = data["koi_catalog"]
-            usable = data["koi_catalog_usable"]
+            df = data["toi_catalog"]
+            usable = data["toi_catalog_usable"]
             Core.typeassert(df,DataFrame)
             Core.typeassert(usable,Array{Int64,1})
         catch
-            error(string("# Failed to read koi catalog >",filename,"< in jld2 format."))
+            error(string("# Failed to read toi catalog >",filename,"< in jld2 format."))
         end
     else
        try
             df = CSV.read(filename,comment="#")
 
             # Choose which TOIs to keep
-            #is_cand = (csv_data[!,:,koi_disposition_idx] .== "CONFIRMED") | (csv_data[!,:,koi_disposition_idx] .== "CANDIDATE")
-            is_cand = df[!,:koi_pdisposition] .== "CANDIDATE"
-            has_radius = .!ismissing.(df[!,:koi_ror])
-            has_period = .!(ismissing.(df[!,:koi_period]) .| ismissing.(df[!,:koi_period_err1]) .| ismissing.(df[!,:koi_period_err2]))
+            #is_cand = (csv_data[!,:,toi_disposition_idx] .== "CONFIRMED") | (csv_data[!,:,toi_disposition_idx] .== "CANDIDATE")
+            is_cand = df[!,:toi_pdisposition] .== "CANDIDATE"
+            has_radius = .!ismissing.(df[!,:toi_ror])
+            has_period = .!(ismissing.(df[!,:toi_period]) .| ismissing.(df[!,:toi_period_err1]) .| ismissing.(df[!,:toi_period_err2]))
 
             is_usable = .&(is_cand, has_radius, has_period)
             usable = findall(is_usable)
-           #  symbols_to_keep = [:kepid, :kepoi_name, :koi_pdisposition, :koi_score, :koi_ror, :koi_period, :koi_period_err1, :koi_period_err2, :koi_time0bk, :koi_time0bk_err1, :koi_time0bk_err2, :koi_depth, :koi_depth_err1, :koi_depth_err2, :koi_duration, :koi_duration_err1, :koi_duration_err2]
+           #  symbols_to_keep = [:ticid, :kepoi_name, :toi_pdisposition, :toi_score, :toi_ror, :toi_period, :toi_period_err1, :toi_period_err2, :toi_time0bk, :toi_time0bk_err1, :toi_time0bk_err2, :toi_depth, :toi_depth_err1, :toi_depth_err2, :toi_duration, :toi_duration_err1, :toi_duration_err2]
            # df = df[usable, symbols_to_keep]
            # tmp_df = DataFrame()
            # for col in names(df)
            #     tmp_df[col] = collect(skipmissing(df[col]))
            # end
            # df = tmp_df
-           # usable = collect(1:length(df[!,:kepid]))
+           # usable = collect(1:length(df[!,:ticid]))
         catch
-            error(string("# Failed to read koi catalog >",filename,"< in ascii format."))
+            error(string("# Failed to read toi catalog >",filename,"< in ascii format."))
         end
     end
     return df, usable
 end
 
 """
-    setup_actual_planet_candidate_catalog(df_star, df_koi, usable_koi, sim_param)
+    setup_actual_planet_candidate_catalog(df_star, df_toi, usable_toi, sim_param)
 
 Create (true) catalog of TESS observations of TESS targets
 
 # Arguments:
 - `df_star::DataFrame`: DataFrame containing all TESS target stars in catalog
-   NOTE: df_star is assumed to have fields kepid, mass and radius for all targets in the survey)
-- `df_koi::DataFrame`: DataFrame containing all TESS Object of Interests (TOIs)
-- `usable_koi::Array{Integer}`: Array of TOI dataframe row indices corresponding to TOIs to use
+   NOTE: df_star is assumed to have fields ticid, mass and radius for all targets in the survey)
+- `df_toi::DataFrame`: DataFrame containing all TESS Object of Interests (TOIs)
+- `usable_toi::Array{Integer}`: Array of TOI dataframe row indices corresponding to TOIs to use
 - `sim_param::SimParam`: Simulation parameter object
 
 # Returns:
 - TESS observations catalog containing TESS targets and associated TOIs (to be used as true catalog in comparison with simulated observations)
 """
-function setup_actual_planet_candidate_catalog(df_star::DataFrame, df_koi::DataFrame, usable_koi::Array{Int64}, sim_param::SimParam)
+function setup_actual_planet_candidate_catalog(df_star::DataFrame, df_toi::DataFrame, usable_toi::Array{Int64}, sim_param::SimParam)
     local target_obs, num_pl
-    df_koi = df_koi[usable_koi,:]
+    df_toi = df_toi[usable_toi,:]
 
     # Deprecated code to take a list of KepIDs and TOI names to pre-select a subset of TOIs
-    # if haskey(sim_param, "koi_subset_csv")
-    #     koi_subset = fill(false, length(df_koi[!,:kepid]))
+    # if haskey(sim_param, "toi_subset_csv")
+    #     toi_subset = fill(false, length(df_toi[!,:ticid]))
 
-    #     subset_df = readtable(convert(String,get(sim_param,"koi_subset_csv", "christiansen_kov.csv")), header=true, separator=' ')
+    #     subset_df = readtable(convert(String,get(sim_param,"toi_subset_csv", "christiansen_kov.csv")), header=true, separator=' ')
 
     #     for n in 1:length(subset_df[!,1])
     #         subset_colnum = 1
-    #         subset_entry = findall(x->x==subset_df[n,1], df_koi[names(subset_df)[1]])
+    #         subset_entry = findall(x->x==subset_df[n,1], df_toi[names(subset_df)[1]])
     #         # println("Initial cut: ", subset_entry)
     #         while (length(subset_entry) > 1) & (subset_colnum < length(names(subset_df)))
     #             subset_colnum += 1
 
-    #             subsubset = findall(x->round(x*10.)==round(subset_df[n,subset_colnum]*10.), df_koi[subset_entry,names(subset_df)[subset_colnum]])
-    #             # println("Extra cut: ", subset_df[n,subset_colnum], " / ", df_koi[subset_entry,col_idx], " = ", subsubset)
+    #             subsubset = findall(x->round(x*10.)==round(subset_df[n,subset_colnum]*10.), df_toi[subset_entry,names(subset_df)[subset_colnum]])
+    #             # println("Extra cut: ", subset_df[n,subset_colnum], " / ", df_toi[subset_entry,col_idx], " = ", subsubset)
     #             subset_entry = subset_entry[subsubset]
     #         end
     #         if length(subset_entry) > 1
-    #             cand_sub = findall(x->x == "CANDIDATE",df_koi[subset_entry,:koi_pdisposition])
+    #             cand_sub = findall(x->x == "CANDIDATE",df_toi[subset_entry,:toi_pdisposition])
     #             subset_entry = subset_entry[cand_sub]
     #             if length(subset_entry) > 1
     #                 println("# Multiple planets found in final cut: ", subset_df[n,1])
@@ -304,19 +294,19 @@ function setup_actual_planet_candidate_catalog(df_star::DataFrame, df_koi::DataF
     #         if length(subset_entry) < 1
     #             println("# No planets found in final cut: ", subset_df[n,:])
     #         end
-    #         koi_subset[subset_entry] = true
+    #         toi_subset[subset_entry] = true
     #     end
-    #     df_koi = df_koi[findall(koi_subset),:]
-    #     tot_plan = count(x->x, koi_subset)
+    #     df_toi = df_toi[findall(toi_subset),:]
+    #     tot_plan = count(x->x, toi_subset)
     # end
 
     output = TESSObsCatalog()
-    sort!(df_star, (:kepid))
-    df_obs = join(df_star, df_koi, on = :kepid)
-    #df_obs = sort!(df_obs, cols=(:kepid))
-    df_obs = sort!(df_obs, (:kepid))
+    sort!(df_star, (:ticid))
+    df_obs = join(df_star, df_toi, on = :ticid)
+    #df_obs = sort!(df_obs, cols=(:ticid))
+    df_obs = sort!(df_obs, (:ticid))
 
-    # if haskey(sim_param, "koi_subset_csv")
+    # if haskey(sim_param, "toi_subset_csv")
     #     tot_plan -= length(df_obs[!,:kepoi_name])
     #     println("# Number of planet candidates in subset file with no matching star in table: ", tot_plan)
     # end
@@ -326,23 +316,23 @@ function setup_actual_planet_candidate_catalog(df_star::DataFrame, df_koi::DataF
     for i in 1:length(df_obs[!,:kepoi_name])
         if plid == 0
             plid = 1
-            while i+plid < length(df_obs[!,:kepoi_name]) && df_obs[i+plid,:kepid] == df_obs[i,:kepid]
+            while i+plid < length(df_obs[!,:kepoi_name]) && df_obs[i+plid,:ticid] == df_obs[i,:ticid]
                 plid += 1
             end
             num_pl = plid
             target_obs = TESSTargetObs(num_pl)
-	        #target_obs.star = ExoplanetsSysSim.StarObs(df_obs[i,:radius],df_obs[i,:mass],findfirst(df_star[!,:kepid], df_obs[i,:kepid]))
-            star_idx = searchsortedfirst(df_star[!,:kepid],df_obs[i,:kepid])
-            if star_idx > length(df_star[!,:kepid])
-                @warn "# Couldn't find kepid " * df_star[i,:kepid] * " in df_obs."
-                star_idx = rand(1:length(df_star[!,:kepid]))
+	        #target_obs.star = ExoplanetsSysSim.StarObs(df_obs[i,:radius],df_obs[i,:mass],findfirst(df_star[!,:ticid], df_obs[i,:ticid]))
+            star_idx = searchsortedfirst(df_star[!,:ticid],df_obs[i,:ticid])
+            if star_idx > length(df_star[!,:ticid])
+                @warn "# Couldn't find ticid " * df_star[i,:ticid] * " in df_obs."
+                star_idx = rand(1:length(df_star[!,:ticid]))
             end
             target_obs.star = ExoplanetsSysSim.StarObs(df_obs[i,:radius],df_obs[i,:mass],star_idx)
 
         end
 
-        target_obs.obs[plid] = ExoplanetsSysSim.TransitPlanetObs(df_obs[i,:koi_period],df_obs[i,:koi_time0bk],df_obs[i,:koi_depth]/1.0e6,df_obs[i,:koi_duration])
-        target_obs.sigma[plid] = ExoplanetsSysSim.TransitPlanetObs((abs(df_obs[i,:koi_period_err1])+abs(df_obs[i,:koi_period_err2]))/2,(abs(df_obs[i,:koi_time0bk_err1])+abs(df_obs[i,:koi_time0bk_err2]))/2,(abs(df_obs[i,:koi_depth_err1]/1.0e6)+abs(df_obs[i,:koi_depth_err2]/1.0e6))/2,(abs(df_obs[i,:koi_duration_err1])+abs(df_obs[i,:koi_duration_err2]))/2)
+        target_obs.obs[plid] = ExoplanetsSysSim.TransitPlanetObs(df_obs[i,:toi_period],df_obs[i,:toi_time0bk],df_obs[i,:toi_depth]/1.0e6,df_obs[i,:toi_duration])
+        target_obs.sigma[plid] = ExoplanetsSysSim.TransitPlanetObs((abs(df_obs[i,:toi_period_err1])+abs(df_obs[i,:toi_period_err2]))/2,(abs(df_obs[i,:toi_time0bk_err1])+abs(df_obs[i,:toi_time0bk_err2]))/2,(abs(df_obs[i,:toi_depth_err1]/1.0e6)+abs(df_obs[i,:toi_depth_err2]/1.0e6))/2,(abs(df_obs[i,:toi_duration_err1])+abs(df_obs[i,:toi_duration_err2]))/2)
 	#target_obs.prob_detect = ExoplanetsSysSim.SimulatedSystemDetectionProbs{OneObserver}( ones(num_pl), ones(num_pl,num_pl), ones(num_pl), fill(Array{Int64}(undef,0), 1) )  # Made line below to simplify calling
         target_obs.prob_detect = ExoplanetsSysSim.OneObserverSystemDetectionProbs(num_pl)
         plid -= 1

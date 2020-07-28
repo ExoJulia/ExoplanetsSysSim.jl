@@ -61,7 +61,7 @@ export setup_star_table, star_table, num_usable_in_star_table, set_star_table, s
 export KeplerTarget
 export num_planets, generate_kepler_target_from_table, generate_kepler_target_simple
 include("target.jl")
-export KeplerTargetObs
+export KeplerTargetObs, TESSTargetObs
 include("transit_observations.jl")
 export semimajor_axis, period_given_semimajor_axis
 #export setup_koi_table, koi_table, num_koi

@@ -3,6 +3,15 @@
 
 #using Distributions
 
+struct TESSTarget
+  sys::Vector{PlanetarySystemAbstract}
+  snr::Array{Float64,1} # the SNR of observations in each sector?
+  contam::Float64
+  data_span::Float64
+  duty_cycle::Float64
+  # QUERY: do I need a window_function_id?
+end 
+
 struct KeplerTarget
   #sys::PlanetarySystem   # Make array for planetary systems aroud multiple stars in one target?
   sys::Vector{PlanetarySystemAbstract}
@@ -20,10 +29,15 @@ struct KeplerTarget
   #ra::Float64           # E.g., if we cared about position on sky     QUERY:  Should we replace with galactic longitude and latitute?
   #dec::Floa64           #
 end
+
 num_planets(t::KeplerTarget) = sum( num_planets, t.sys)
 flux(t::KeplerTarget) = sum(flux,t.sys)+t.contam
 
+num_planets(t::TESSTarget) = sum( num_planets, t.sys)
+flux(t::TESSTarget) = sum(flux,t.sys)+t.contam
+
 star_table(t::KeplerTarget, sym::Symbol) = StellarTable.star_table(t.sys[1].star.id,sym)
+star_table(t::TESSTarget, sym::Symbol) = StellarTable.star_table(t.sys[1].star.id,sym)
 
 
 function draw_asymmetric_normal(mu::Real, sig_plus::Real, sig_minus::Real; rn = randn() )
@@ -106,6 +120,66 @@ function generate_kepler_target_from_table(sim_param::SimParam)
   # ch = rand(DiscreteUniform(1,84))              # Removed channel in favor of window function id
   ps = generate_planetary_system(star, sim_param)
   return KeplerTarget([ps],repeat(cdpp_arr, outer=[1,1]),contam,data_span,duty_cycle,wf_id)
+end
+
+function generate_tess_target_from_table(sim_param::SimParam)
+  ## For now, this is just basically a clone of the kepler version
+  ## with the exception that there's no CDPPs.
+  generate_planetary_system = get_function(sim_param,"generate_planetary_system")
+  max_draws_star_properties = 20
+  min_star_radius = 0.5
+  min_star_mass = 0.5
+  max_star_radius = 2.0
+  max_star_mass = 2.0
+  max_star_density = 1000.0
+  use_star_table_sigmas = true
+  min_frac_rad_sigma = 0.06
+  max_star_id = StellarTable.num_usable_in_star_table()
+
+  star_table(id::Integer,sym::Symbol) = StellarTable.star_table(id,sym)
+
+  @assert(1<=max_star_id)
+  star_id = rand(1:max_star_id)
+  mass = 0.0
+  dens = 0.0
+  radius = 0.0
+    #if use_star_table_sigmas
+    if get(sim_param,"use_star_table_sigmas",false)
+        attmpt_num = 0
+        while (!(min_star_radius<radius<max_star_radius)) || (!(min_star_mass<mass<max_star_mass))# || (!(0.0<dens<max_star_density))
+            if attmpt_num >= max_draws_star_properties
+                star_id = rand(1:max_star_id)
+                attmpt_num = 0
+            end
+            rad_errp = max(star_table(star_id,:radius_err1), min_frac_rad_sigma*star_table(star_id,:radius))
+            rad_errn = max(abs(star_table(star_id,:radius_err2)), min_frac_rad_sigma*star_table(star_id,:radius))
+            rn = randn()
+            radius = draw_asymmetric_normal( star_table(star_id,:radius), rad_errp,  rad_errn, rn=rn)
+            mass = draw_asymmetric_normal( star_table(star_id,:mass), star_table(star_id,:mass_err1), abs(star_table(star_id,:mass_err2)), rn=rn )
+            #dens = draw_asymmetric_normal( star_table(star_id,:dens), star_table(star_id,:dens_err1), abs(star_table(star_id,:dens_err2)) )
+            attmpt_num += 1
+        end
+        dens   = (mass*sun_mass_in_kg_IAU2010*1000.)/(4//3*pi*(radius*sun_radius_in_m_IAU2015*100.)^3)  # Self-consistent density (gm/cm^3)
+  else
+    radius = star_table(star_id,:radius)
+    mass   = star_table(star_id,:mass)
+    #dens   = star_table(star_id,:dens)
+    dens   = (mass*sun_mass_in_kg_IAU2010*1000.)/(4//3*pi*(radius*sun_radius_in_m_IAU2015*100.)^3)  # Self-consistent density (gm/cm^3)
+  end
+  ld = LimbDarkeningParam4thOrder(star_table(star_id,:limbdark_coeff1), star_table(star_id,:limbdark_coeff2), star_table(star_id,:limbdark_coeff3), star_table(star_id,:limbdark_coeff4) )
+  star = SingleStar(radius,mass,1.0,ld,star_id)     # TODO SCI: Allow for blends, binaries, etc.
+  # cdpp_arr = make_cdpp_array_empty(star_id) # Note: Now leaving this field empty out and looking up each time via interpolate_cdpp_to_duration_lookup_cdpp instead of interpolate_cdpp_to_duration_use_target_cdpp
+  snr_arr = zeros(size(star_table(star_id, :sectors)))
+  contam = star_table(star_id, :contam)
+  data_span = star_table(star_id, :dataspan)
+  duty_cycle = star_table(star_id, :dutycycle)
+  #if StellarTable.star_table_has_key(:wf_id)
+  #   wf_id = star_table(star_id,:wf_id)
+  #else
+  #   wf_id = WindowFunction.get_window_function_id(star_table(star_id,:kepid))
+  #end
+  ps = generate_planetary_system(star, sim_param)
+  return TESSTarget([ps],snr_arr,contam,data_span,duty_cycle)
 end
 
 function generate_kepler_target_simple(sim_param::SimParam)
