@@ -751,9 +751,24 @@ mutable struct KeplerTargetObs                        # QUERY:  Do we want to ma
 
   star::StarObs
 end
+
+mutable struct TESSTargetObs                        # QUERY:  Do we want to make this type depend on whether the catalog is based on simulated or real data?
+  obs::Vector{TransitPlanetObs}
+  sigma::Vector{TransitPlanetObs}           # Simplistic approach to uncertainties for now.  QUERY: Should estimated uncertainties be part of Observations type?
+  # phys_id::Vector{Tuple{Int32,Int32}}     # So we can lookup the system's properties # Commented out since Not used
+
+  prob_detect::SystemDetectionProbsAbstract  # QUERY: Specialize type of prob_detect depending on whether for simulated or real data?
+
+  has_sc::BitArray{1}                        # Note: Changed from Array{Bool}.  Alternatively, we could try StaticArray{Bool} so fixed size?  Do we even need to keep this?
+
+  star::StarObs
+end
+
 #KeplerTargetObs(n::Integer) = KeplerTargetObs( fill(TransitPlanetObs(),n), fill(TransitPlanetObs(),n), fill(tuple(0,0),n),  ObservedSystemDetectionProbsEmpty(),  fill(false,num_quarters), StarObs(0.0,0.0) )
 KeplerTargetObs(n::Integer) = KeplerTargetObs( fill(TransitPlanetObs(),n), fill(TransitPlanetObs(),n), ObservedSystemDetectionProbsEmpty(),  falses(has_sc_bit_array_size), StarObs(0.0,0.0,0) )
+TESSTargetObs(n::Integer) = TESSTargetObs( fill(TransitPlanetObs(),n), fill(TransitPlanetObs(),n), ObservedSystemDetectionProbsEmpty(),  falses(has_sc_bit_array_size), StarObs(0.0,0.0,0) )
 num_planets(t::KeplerTargetObs) = length(t.obs)
+num_planets(t::TESSTargetObs) = length(t.obs)
 
 """
     calc_target_obs_sky_ave(t, sim_param)

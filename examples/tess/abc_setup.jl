@@ -76,7 +76,7 @@ function gen_data(param_vector::Vector{Float64})
 end
 
 # TODO OPT: Eventually, could adapt ABC.jl to use distance from first pass to decide if should compute additional summary statistics
-function calc_summary_stats(cat::ObsCatalog)
+function calc_summary_stats(cat::TESSObsCatalog)
     global sim_param_closure
     sum_stat = calc_summary_stats_obs_binned_rates(cat, sim_param_closure, obs_skyavg = true)
     return sum_stat

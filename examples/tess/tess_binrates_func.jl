@@ -529,7 +529,7 @@ setup_star_table_dr25(filename::String; force_reread::Bool = false) = setup_dr25
 
 
 ## summary_statistics
-function calc_summary_stats_obs_binned_rates(cat_obs::ObsCatalog, param::SimParam; trueobs_cat::Bool = false, obs_skyavg::Bool = false)
+function calc_summary_stats_obs_binned_rates(cat_obs::TESSObsCatalog, param::SimParam; trueobs_cat::Bool = false, obs_skyavg::Bool = false)
   ssd = Dict{String,Any}()
   cache = Dict{String,Any}()
 
@@ -703,7 +703,7 @@ end
 
 
 ## inverse_detection & simple bayesian
-function inv_det(cat_obs::ObsCatalog, param::SimParam)
+function inv_det(cat_obs::TESSObsCatalog, param::SimParam)
     num_targ = ExoplanetsSysSim.StellarTable.num_usable_in_star_table()
 
     limitP::Array{Float64,1} = get_any(param, "p_lim_arr", Array{Float64,1})
@@ -729,7 +729,7 @@ function inv_det(cat_obs::ObsCatalog, param::SimParam)
     println()
 end
 
-function simp_bayes(cat_obs::ObsCatalog, param::SimParam)
+function simp_bayes(cat_obs::TESSObsCatalog, param::SimParam)
     num_targ = ExoplanetsSysSim.StellarTable.num_usable_in_star_table()
 
     limitP::Array{Float64,1} = get_any(param, "p_lim_arr", Array{Float64,1})
@@ -755,7 +755,7 @@ function simp_bayes(cat_obs::ObsCatalog, param::SimParam)
     println()
 end
 
-function inv_det_simp_bayes(cat_obs::ObsCatalog, param::SimParam)
+function inv_det_simp_bayes(cat_obs::TESSObsCatalog, param::SimParam)
     num_targ = ExoplanetsSysSim.StellarTable.num_usable_in_star_table()
 
     limitP::Array{Float64,1} = get_any(param, "p_lim_arr", Array{Float64,1})
@@ -797,7 +797,7 @@ function inv_det_simp_bayes(cat_obs::ObsCatalog, param::SimParam)
 end
 
 ## cnt_bin & np_bin (inverse detection & simple bayesian)
-function cnt_np_bin(cat_obs::ObsCatalog, param::SimParam, verbose::Bool = true)
+function cnt_np_bin(cat_obs::TESSObsCatalog, param::SimParam, verbose::Bool = true)
     num_targ = ExoplanetsSysSim.StellarTable.num_usable_in_star_table()
     idx_tranets = findall(x::TESSTargetObs-> length(x.obs) > 0, cat_obs.target)::Array{Int64,1}
 

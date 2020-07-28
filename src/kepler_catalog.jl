@@ -118,6 +118,7 @@ end
 
 # Test if this planetary system has at least one planet that transits (assuming a single observer)
 function select_targets_one_obs(ps::PlanetarySystemAbstract)
+## REFACTOR MARKER: NOT KEPLER SPECIFIC
  for pl in 1:length(ps.orbit)
    ecc::Float64 = ps.orbit[pl].ecc
    incl::Float64 = ps.orbit[pl].incl
@@ -259,7 +260,7 @@ function read_koi_catalog(filename::String, force_reread::Bool = false)
 end
 
 """
-    setup_actual_planet_candidate_catalog(df_star, df_koi, usable_koi, sim_param)
+  setup_actual_pc_catalog_kepler(df_star, df_koi, usable_koi, sim_param)
 
 Create (true) catalog of Kepler observations of Kepler targets
 
@@ -273,7 +274,7 @@ Create (true) catalog of Kepler observations of Kepler targets
 # Returns:
 - Kepler observations catalog containing Kepler targets and associated KOIs (to be used as true catalog in comparison with simulated observations)
 """
-function setup_actual_planet_candidate_catalog(df_star::DataFrame, df_koi::DataFrame, usable_koi::Array{Int64}, sim_param::SimParam)
+function setup_actual_pc_catalog_kepler(df_star::DataFrame, df_koi::DataFrame, usable_koi::Array{Int64}, sim_param::SimParam)
     local target_obs, num_pl
     df_koi = df_koi[usable_koi,:]
 
@@ -386,6 +387,8 @@ function calc_prob_detect_list(cat::KeplerPhysicalCatalog, sim_param::SimParam)
 end
 
 function test_catalog_constructors(sim_param::SimParam)
+  ## REFACTOR MARKER: NOT KEPLER SPECIFIC
+  # or maybe it is if it _seriously_ depends on CDPPs
   cat_phys = generate_kepler_physical_catalog(sim_param)::KeplerPhysicalCatalog
   id = findfirst( x->num_planets(x)>=1 , cat_phys.target)   # fast forward to first target that has some planets
   @assert(length(id)>=1)

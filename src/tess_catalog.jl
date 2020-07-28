@@ -6,7 +6,7 @@ using CSV
 using FileIO
 
 mutable struct TESSPhysicalCatalog
-  target::Array{TessTarget,1}
+  target::Array{TESSTarget,1}
 end
 
 mutable struct TESSObsCatalog
@@ -105,30 +105,6 @@ function observe_tess_targets(calc_target_obs::Function, input::TESSPhysicalCata
   resize!(output.target,length(input.target))
   return output
 end
-
-# Test if this planetary system has at least one planet that transits (assuming a single observer)
-function select_targets_one_obs(ps::PlanetarySystemAbstract)
- for pl in 1:length(ps.orbit)
-   ecc::Float64 = ps.orbit[pl].ecc
-   incl::Float64 = ps.orbit[pl].incl
-   a::Float64 = semimajor_axis(ps,pl)
-   Rstar::Float64 = rsol_in_au*ps.star.radius
-   if (Rstar > (a*(1-ecc)*(1+ecc))/(1+ecc*sin(ps.orbit[pl].omega))*cos(incl))
-     return true
-   end
- end
- return false
-end
-#=
-function select_targets_one_obs(ps::PlanetarySystemAbstract)
-  for pl in 1:length(ps.orbit)
-    if does_planet_transit(ps,pl)
-       return true
-    end
-  end
-  return false
-end
-=#
 
 # Remove undetected planets from physical catalog
 # TODO: OPT: Maybe create array of bools for which planets to keep, rather than splicing out non-detections?
@@ -263,7 +239,7 @@ Create (true) catalog of TESS observations of TESS targets
 # Returns:
 - TESS observations catalog containing TESS targets and associated TOIs (to be used as true catalog in comparison with simulated observations)
 """
-function setup_actual_planet_candidate_catalog(df_star::DataFrame, df_toi::DataFrame, usable_toi::Array{Int64}, sim_param::SimParam)
+function setup_actual_pc_catalog_tess(df_star::DataFrame, df_toi::DataFrame, usable_toi::Array{Int64}, sim_param::SimParam)
     local target_obs, num_pl
     df_toi = df_toi[usable_toi,:]
 
@@ -373,17 +349,4 @@ function calc_prob_detect_list(cat::TESSPhysicalCatalog, sim_param::SimParam)
   end
   idx = findall(x->x>0.0,pdetectlist)
   pdetectlist[idx]
-end
-
-function test_catalog_constructors(sim_param::SimParam)
-  cat_phys = generate_tess_physical_catalog(sim_param)::TESSPhysicalCatalog
-  id = findfirst( x->num_planets(x)>=1 , cat_phys.target)   # fast forward to first target that has some planets
-  @assert(length(id)>=1)
-  semimajor_axis(cat_phys.target[id].sys[1],1)
-  pdetlist = calc_prob_detect_list(cat_phys,sim_param)
-  calc_target_obs_single_obs(cat_phys.target[id],sim_param)
-  calc_target_obs_sky_ave(cat_phys.target[id],sim_param)
-  @assert( length(cat_phys.target[id].sys[1].planet)  == num_planets(cat_phys.target[id]) )
-  cat_obs = simulated_read_tess_observations(sim_param)
-  return (cat_phys, cat_obs)
 end
