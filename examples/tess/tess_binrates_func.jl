@@ -28,8 +28,8 @@ function setup_sim_param_tessbinrates(args::Vector{String} = String[] )   # allo
     add_param_fixed(sim_param,"generate_star",ExoplanetsSysSim.generate_star_dumb)
     add_param_fixed(sim_param,"generate_planetary_system", ExoplanetsSysSim.generate_planetary_system_uncorrelated_incl)
     add_param_fixed(sim_param,"generate_tess_target",ExoplanetsSysSim.generate_tess_target_from_table)
-    add_param_fixed(sim_param,"star_table_setup",setup_star_table_tess)
-    add_param_fixed(sim_param,"stellar_catalog","tess_stellar.csv")
+    add_param_fixed(sim_param,"star_table_setup",setup_star_table_tic)
+    add_param_fixed(sim_param,"stellar_catalog","tess_stellar_all.csv")
     # add_param_fixed(sim_param,"osd_file","dr25fgk_osds.jld")
     add_param_fixed(sim_param,"generate_num_planets",generate_num_planets_binrates_uniform)
     add_param_fixed(sim_param,"generate_planet_mass_from_radius",ExoplanetsSysSim.generate_planet_mass_from_radius_powerlaw)
@@ -61,9 +61,9 @@ function set_test_param(sim_param_closure::SimParam)
         @assert (typeof(stellar_catalog) == String)
         add_param_fixed(sim_param_closure,"stellar_catalog",stellar_catalog)
     end
-    if @isdefinedlocal(koi_catalog)
-        @assert (typeof(koi_catalog) == String)
-        add_param_fixed(sim_param_closure,"koi_catalog",koi_catalog)
+    if @isdefinedlocal(planetary_catalog)
+        @assert (typeof(planetary_catalog) == String)
+        add_param_fixed(sim_param_closure,"planetary_catalog",planetary_catalog)
     end
 
     if @isdefinedlocal(num_targ_sim)
@@ -119,9 +119,9 @@ function set_test_param_total(sim_param_closure::SimParam)
         @assert (typeof(stellar_catalog) == String)
         add_param_fixed(sim_param_closure,"stellar_catalog",stellar_catalog)
     end
-    if @isdefinedlocal(koi_catalog)
-        @assert (typeof(koi_catalog) == String)
-        add_param_fixed(sim_param_closure,"koi_catalog",koi_catalog)
+    if @isdefinedlocal(planetary_catalog)
+        @assert (typeof(planetary_catalog) == String)
+        add_param_fixed(sim_param_closure,"planetary_catalog",planetary_catalog)
     end
 
     if @isdefinedlocal(num_targ_sim)
@@ -437,7 +437,7 @@ end
 
 
 ## stellar_table
-function setup_dr25(sim_param::SimParam; force_reread::Bool = false)
+function setup_tic(sim_param::SimParam; force_reread::Bool = false)
   #global df
   wf = WindowFunction.setup_window_function(sim_param)
   WindowFunction.setup_OSD_interp(sim_param) #read in osd files so they can be interpolated
@@ -446,8 +446,8 @@ function setup_dr25(sim_param::SimParam; force_reread::Bool = false)
      return df
      #return data
   end
-  stellar_catalog_filename = convert(String,joinpath(abspath(joinpath(dirname(Base.find_package("ExoplanetsSysSim")),"..")), "data", convert(String,get(sim_param,"stellar_catalog","q1_q17_dr25_stellar.csv")) ) )
-  df = setup_dr25(stellar_catalog_filename)
+  stellar_catalog_filename = convert(String,joinpath(abspath(joinpath(dirname(Base.find_package("ExoplanetsSysSim")),"..")), "data", convert(String,get(sim_param,"stellar_catalog")) ) )
+  df = setup_tic(stellar_catalog_filename)
   add_param_fixed(sim_param,"read_stellar_catalog",true)
   add_param_fixed(sim_param,"num_tess_targets",StellarTable.num_usable_in_star_table())
   if !haskey(sim_param.param,"num_targets_sim_pass_one")
@@ -457,7 +457,7 @@ function setup_dr25(sim_param::SimParam; force_reread::Bool = false)
   return df
 end
 
-function setup_dr25(filename::String; force_reread::Bool = false)
+function setup_tic(filename::String; force_reread::Bool = false)
   #global df, usable
   df = ExoplanetsSysSim.StellarTable.df
   #usable = ExoplanetsSysSim.StellarTable.usable
@@ -524,8 +524,8 @@ function setup_dr25(filename::String; force_reread::Bool = false)
   return df
 end
 
-setup_star_table_dr25(sim_param::SimParam; force_reread::Bool = false) = setup_dr25(sim_param, force_reread=force_reread)
-setup_star_table_dr25(filename::String; force_reread::Bool = false) = setup_dr25(filename, force_reread=force_reread)
+setup_star_table_tic(sim_param::SimParam; force_reread::Bool = false) = setup_tic(sim_param, force_reread=force_reread)
+setup_star_table_tic(filename::String; force_reread::Bool = false) = setup_tic(filename, force_reread=force_reread)
 
 
 ## summary_statistics

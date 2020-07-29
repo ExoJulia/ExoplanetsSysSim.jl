@@ -22,14 +22,14 @@ function setup(sim_param::SimParam; force_reread::Bool = false, symbols_to_keep:
   if haskey(sim_param,"read_koi_catalog") && !force_reread
      return df
   end
-  koi_catalog = joinpath(dirname(pathof(ExoplanetsSysSim)),"..", "data", get(sim_param,"koi_catalog","q1_q17_dr25_koi.csv") )
+  planetary_catalog = joinpath(dirname(pathof(ExoplanetsSysSim)),"..", "data", get(sim_param,"planetary_catalog","q1_q17_dr25_koi.csv") )
   add_param_fixed(sim_param,"read_koi_catalog",true)
   try 
-    #df = readtable(koi_catalog)
-    #df = CSV.read(koi_catalog,nullable=true)
-    df = CSV.read(koi_catalog,allowmissing=:all)
+    #df = readtable(planetary_catalog)
+    #df = CSV.read(planetary_catalog,nullable=true)
+    df = CSV.read(planetary_catalog,allowmissing=:all)
   catch
-    error(string("# Failed to read koi catalog >",koi_catalog,"<."))
+    error(string("# Failed to read koi catalog >",planetary_catalog,"<."))
   end
 
   has_planet = ! (isna(df[:koi_period]) | isna(df[:koi_time0bk]) | isna(df[:koi_duration]) | isna(:koi_depth) )

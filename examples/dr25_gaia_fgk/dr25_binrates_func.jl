@@ -62,9 +62,9 @@ function set_test_param(sim_param_closure::SimParam)
         @assert (typeof(stellar_catalog) == String)
         add_param_fixed(sim_param_closure,"stellar_catalog",stellar_catalog)
     end
-    if @isdefinedlocal(koi_catalog)
-        @assert (typeof(koi_catalog) == String)
-        add_param_fixed(sim_param_closure,"koi_catalog",koi_catalog)
+    if @isdefinedlocal(planetary_catalog)
+        @assert (typeof(planetary_catalog) == String)
+        add_param_fixed(sim_param_closure,"planetary_catalog",planetary_catalog)
     end
     
     if @isdefinedlocal(num_targ_sim)
@@ -120,9 +120,9 @@ function set_test_param_total(sim_param_closure::SimParam)
         @assert (typeof(stellar_catalog) == String)
         add_param_fixed(sim_param_closure,"stellar_catalog",stellar_catalog)
     end
-    if @isdefinedlocal(koi_catalog)
-        @assert (typeof(koi_catalog) == String)
-        add_param_fixed(sim_param_closure,"koi_catalog",koi_catalog)
+    if @isdefinedlocal(planetary_catalog)
+        @assert (typeof(planetary_catalog) == String)
+        add_param_fixed(sim_param_closure,"planetary_catalog",planetary_catalog)
     end
     
     if @isdefinedlocal(num_targ_sim)

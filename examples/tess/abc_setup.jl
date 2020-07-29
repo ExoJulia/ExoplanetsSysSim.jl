@@ -132,9 +132,9 @@ function setup(prior_choice::String, bin_size_factor::Float64)
     ### Use real planet candidate catalog data
     df_toi, usable_toi = read_toi_catalog(sim_param_closure)
     println("# Finished reading in TOI data")  
-    df_star = setup_star_table_tess(sim_param_closure)
+    df_star = setup_star_table_tic(sim_param_closure)
     println("# Finished reading in stellar data")
-    cat_obs = setup_actual_planet_candidate_catalog(df_star, df_toi, usable_toi, sim_param_closure)
+    cat_obs = setup_actual_pc_catalog_tess(df_star, df_toi, usable_toi, sim_param_closure)
     println("# Finished setting up true catalog")
     ###
     

@@ -194,7 +194,7 @@ Wrapper function to read Kepler Object of Interest (KOI) catalog given SimParam
 
 # Arguments:
 - `sim_param::SimParam`: Simulation parameter object; this function uses the following parameters from the SimParam object:
-  - koi_catalog: String filename of Kepler Object of Interest catalog (if not provided, defaults to "q1_q17_dr25_koi.csv"
+  - planetary_catalog: String filename of Kepler Object of Interest catalog (if not provided, defaults to "q1_q17_dr25_koi.csv"
 - `force_reread::Bool`: Should the file be read in even if a DataFrame of the KOIs already exists in workspace?
 
 # Returns:
@@ -202,7 +202,7 @@ Wrapper function to read Kepler Object of Interest (KOI) catalog given SimParam
 - Vector of booleans indicating which KOIs  were designated as planet candidates by the Kepler pipeline and have a valid observed radius ratio and period (necessary for detection probability calculation).
 """
 function read_koi_catalog(sim_param::SimParam, force_reread::Bool = false)
-    filename = convert(String,joinpath(dirname(pathof(ExoplanetsSysSim)),"..", "data", convert(String,get(sim_param,"koi_catalog","q1_q17_dr25_koi.csv")) ) )
+    filename = convert(String,joinpath(dirname(pathof(ExoplanetsSysSim)),"..", "data", convert(String,get(sim_param,"planetary_catalog","q1_q17_dr25_koi.csv")) ) )
     return read_koi_catalog(filename, force_reread)
 end
 
@@ -225,7 +225,7 @@ function read_koi_catalog(filename::String, force_reread::Bool = false)
     if occursin(r".jld2$",filename) && !force_reread
         try
             data = load(filename)
-            df = data["koi_catalog"]
+            df = data["planetary_catalog"]
             usable = data["koi_catalog_usable"]
             Core.typeassert(df,DataFrame)
             Core.typeassert(usable,Array{Int64,1})

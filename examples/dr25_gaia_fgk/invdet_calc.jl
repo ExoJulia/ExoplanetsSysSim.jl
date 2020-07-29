@@ -14,7 +14,7 @@ df_koi,usable_koi = read_koi_catalog(sim_param_closure)
 println("# Finished reading in KOI data")
 df_star = setup_star_table_dr25(sim_param_closure)
 println("# Finished reading in stellar data") 
-cat_obs = setup_actual_planet_candidate_catalog(df_star, df_koi, usable_koi, sim_param_closure)
+cat_obs = setup_actual_pc_catalog_kepler(df_star, df_koi, usable_koi, sim_param_closure)
 
 #@time inv_det_simp_bayes(cat_obs, sim_param_closure)
 @time simp_bayes(cat_obs, sim_param_closure)

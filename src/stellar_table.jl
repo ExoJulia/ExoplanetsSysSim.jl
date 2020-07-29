@@ -1,6 +1,9 @@
 ## ExoplanetsSysSim/src/stellar_table.jl
 ## (c) 2015 Eric B. Ford
 
+## TODO Aditya: adapt to TESS (maybe add a new simparam variable indicating mission)
+## specifically, the rows to be preserved may need changing
+
 module StellarTable
 using ExoplanetsSysSim
 #using DataArrays

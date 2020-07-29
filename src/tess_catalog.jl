@@ -167,7 +167,7 @@ Wrapper function to read TESS Object of Interest (TOI) catalog given SimParam
 - Vector of booleans indicating which TOIs  were designated as planet candidates by the TESS pipeline and have a valid observed radius ratio and period (necessary for detection probability calculation).
 """
 function read_toi_catalog(sim_param::SimParam, force_reread::Bool = false)
-    filename = convert(String,joinpath(dirname(pathof(ExoplanetsSysSim)),"..", "data", convert(String,get(sim_param,"toi_catalog")) ) )
+    filename = convert(String,joinpath(dirname(pathof(ExoplanetsSysSim)),"..", "data", convert(String,get(sim_param,"toi_catalog", "tesstargets/toi_catalog.csv")) ) )
     return read_toi_catalog(filename, force_reread)
 end
 
@@ -203,9 +203,9 @@ function read_toi_catalog(filename::String, force_reread::Bool = false)
 
             # Choose which TOIs to keep
             #is_cand = (csv_data[!,:,toi_disposition_idx] .== "CONFIRMED") | (csv_data[!,:,toi_disposition_idx] .== "CANDIDATE")
-            is_cand = df[!,:toi_pdisposition] .== "CANDIDATE"
-            has_radius = .!ismissing.(df[!,:toi_ror])
-            has_period = .!(ismissing.(df[!,:toi_period]) .| ismissing.(df[!,:toi_period_err1]) .| ismissing.(df[!,:toi_period_err2]))
+            is_cand = df[!,:toi_pdisposition] .== "PC"
+            has_radius = .!ismissing.(df[!,:prad])
+            has_period = .!(ismissing.(df[!,:period]) .| ismissing.(df[!,:period_err]))
 
             is_usable = .&(is_cand, has_radius, has_period)
             usable = findall(is_usable)

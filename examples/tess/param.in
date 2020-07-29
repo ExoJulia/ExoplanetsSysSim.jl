@@ -1,8 +1,8 @@
 # All accepted parameters are listed
 # To use default parameters, add a '#' character at the beginning of the line
 
-stellar_catalog = "tess_stellar.csv"
-koi_catalog = "tois_adapted.csv"
+stellar_catalog = "tesstargets/tess_stellar_all.csv"
+planetary_catalog = "tesstargets/toi_catalog.csv"
 #osd_file = "inputs/dr25fgk_relaxcut_osds.jld2"
 
 num_targ_sim = 1000                       # number of planetary systems in simulated catalogs

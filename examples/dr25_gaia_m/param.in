@@ -3,8 +3,8 @@
 
 #stellar_catalog = "q1_q16_christiansen.jld" # data file for stellar catalog [DEFAULT = "q1_q16_christiansen.jld"]
 stellar_catalog = "q1q17_dr25_gaia_m.jld"
-#koi_catalog = "q1_q16_koi_cand.csv"          # data file for KOI catalog [NO DEFAULT VALUE]
-koi_catalog = "q1_q17_dr25_koi.csv"
+#planetary_catalog = "q1_q16_koi_cand.csv"          # data file for KOI catalog [NO DEFAULT VALUE]
+planetary_catalog = "q1_q17_dr25_koi.csv"
 osd_file = "dr25m_osds.jld"
 
 num_targ_sim = 1750                       # number of planetary systems in simulated catalogs 
