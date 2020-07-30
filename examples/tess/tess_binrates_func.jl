@@ -446,7 +446,7 @@ function setup_tic(sim_param::SimParam; force_reread::Bool = false)
      return df
      #return data
   end
-  stellar_catalog_filename = convert(String,joinpath(abspath(joinpath(dirname(Base.find_package("ExoplanetsSysSim")),"..")), "data", convert(String,get(sim_param,"stellar_catalog")) ) )
+  stellar_catalog_filename = convert(String,joinpath(abspath(joinpath(dirname(Base.find_package("ExoplanetsSysSim")),"..")), "data", convert(String,get(sim_param,"stellar_catalog", "tess_stellar_all.csv")) ) )
   df = setup_tic(stellar_catalog_filename)
   add_param_fixed(sim_param,"read_stellar_catalog",true)
   add_param_fixed(sim_param,"num_tess_targets",StellarTable.num_usable_in_star_table())
@@ -478,49 +478,45 @@ function setup_tic(filename::String; force_reread::Bool = false)
   catch
     error(string("# Failed to read stellar catalog >",filename,"< in ascii format."))
   end
-  println(head(df))
 
-  has_teff = .! (ismissing.(df[:teff]))
-  has_mass = .! (ismissing.(df[:mass]) .| ismissing.(df[:mass_err1]) .| ismissing.(df[:mass_err2]))
-  has_radius = .! (ismissing.(df[:radius]) .| ismissing.(df[:radius_err1]) .| ismissing.(df[:radius_err2]))
-  has_dens = .! (ismissing.(df[:dens]) .| ismissing.(df[:dens_err1]) .| ismissing.(df[:dens_err2]))
-  has_cdpp = .! (ismissing.(df[:rrmscdpp01p5]) .| ismissing.(df[:rrmscdpp02p0]) .| ismissing.(df[:rrmscdpp02p5]) .| ismissing.(df[:rrmscdpp03p0]) .| ismissing.(df[:rrmscdpp03p5]) .| ismissing.(df[:rrmscdpp04p5]) .| ismissing.(df[:rrmscdpp05p0]) .| ismissing.(df[:rrmscdpp06p0]) .| ismissing.(df[:rrmscdpp07p5]) .| ismissing.(df[:rrmscdpp09p0]) .| ismissing.(df[:rrmscdpp10p5]) .| ismissing.(df[:rrmscdpp12p0]) .| ismissing.(df[:rrmscdpp12p5]) .| ismissing.(df[:rrmscdpp15p0]))
-  has_ld = .! (ismissing.(df[:limbdark_coeff1]) .| ismissing.(df[:limbdark_coeff2]) .| ismissing.(df[:limbdark_coeff3]) .| ismissing.(df[:limbdark_coeff4]))
-  has_rest = .! (ismissing.(df[:dataspan]) .| ismissing.(df[:dutycycle]))
+  ## issue here: the TIC does not have SNRs of each observation, because it's not tied to having observed them with TESS.
+  ## workaround: grab the SNRs from the planetary catalog? Not 100% sure...
+  has_teff = .! (ismissing.(df[!, :Teff]))
+  has_mass = .! (ismissing.(df[!, :mass]) .| ismissing.(df[!, :e_mass]))
+  has_radius = .! (ismissing.(df[!, :rad]) .| ismissing.(df[!, :e_rad]))
+  has_dens = .! (ismissing.(df[!, :rho]) .| ismissing.(df[!, :e_rho]))
+  # has_cdpp = .! (ismissing.(df[:rrmscdpp01p5]) .| ismissing.(df[:rrmscdpp02p0]) .| ismissing.(df[:rrmscdpp02p5]) .| ismissing.(df[:rrmscdpp03p0]) .| ismissing.(df[:rrmscdpp03p5]) .| ismissing.(df[:rrmscdpp04p5]) .| ismissing.(df[:rrmscdpp05p0]) .| ismissing.(df[:rrmscdpp06p0]) .| ismissing.(df[:rrmscdpp07p5]) .| ismissing.(df[:rrmscdpp09p0]) .| ismissing.(df[:rrmscdpp10p5]) .| ismissing.(df[:rrmscdpp12p0]) .| ismissing.(df[:rrmscdpp12p5]) .| ismissing.(df[:rrmscdpp15p0]))
+  # has_ld = .! (ismissing.(df[:limbdark_coeff1]) .| ismissing.(df[:limbdark_coeff2]) .| ismissing.(df[:limbdark_coeff3]) .| ismissing.(df[:limbdark_coeff4]))
+  # has_rest = .! (ismissing.(df[:dataspan]) .| ismissing.(df[:dutycycle])) # need to come up with a way to extract these numbers for TESS
   in_Q1Q12 = []
   obs_gt_5q = []
   is_FGK = []
-  for x in 1:length(df[:teff])
-    if (has_teff[x] & (df[x,:teff] > 4000.0) & (df[x,:teff] < 7000.0))# & (df[x,:logg] > 4.0))
+  for x in 1:length(df[!, :Teff])
+    if (has_teff[x] & (df[x,:Teff] > 4000.0) & (df[x,:Teff] < 7000.0))# & (df[x,:logg] > 4.0))
       push!(is_FGK, true)
     else
       push!(is_FGK, false)
     end
   end
-  is_usable = has_radius .& is_FGK .& has_mass .& has_rest .& has_dens .& has_cdpp .& has_ld
-  if occursin(filename,"q1_q16_stellar.csv")
-    is_usable = is_usable .& in_Q1Q12
-  end
-  # See options at: http://exoplanetarchive.ipac.caltech.edu/docs/API_keplerstellar_columns.html
-  symbols_to_keep = [ :kepid, :mass, :mass_err1, :mass_err2, :radius, :radius_err1, :radius_err2, :dens, :dens_err1, :dens_err2, :rrmscdpp01p5, :rrmscdpp02p0, :rrmscdpp02p5, :rrmscdpp03p0, :rrmscdpp03p5, :rrmscdpp04p5, :rrmscdpp05p0, :rrmscdpp06p0, :rrmscdpp07p5, :rrmscdpp09p0, :rrmscdpp10p5, :rrmscdpp12p0, :rrmscdpp12p5, :rrmscdpp15p0, :cdppslplong, :cdppslpshrt, :dataspan, :dutycycle, :limbdark_coeff1, :limbdark_coeff2, :limbdark_coeff3, :limbdark_coeff4 ]
-  delete!(df, [~(x in symbols_to_keep) for x in names(df)])    # delete columns that we won't be using anyway
+  is_usable = has_radius .& is_FGK .& has_mass .& has_dens #.& has_rest
+
+  # See options at: https://iopscience.iop.org/article/10.3847/1538-3881/aad050#ajaad050app2
+  # note that they list Mass, Lum, Rad with capitals, but in the downloads from MAST they're lowercase mass, lum, rad.
+  symbols_to_keep = [ :ID, :mass, :e_mass, :rad, :e_rad, :rho, :e_rho, :contratio]
+  # column_indicators = [~(x in symbols_to_keep) for x in names(df)]
+  select!(df, symbols_to_keep)    # delete columns that we won't be using anyway
   usable = findall(is_usable)
   df = df[usable, symbols_to_keep]
-  tmp_df = DataFrame()
-  for col in names(df)
-      tmp_df[col] = collect(skipmissing(df[col]))
-  end
-  df = tmp_df
-  mast_df = CSV.read(convert(String,joinpath(abspath(joinpath(dirname(Base.find_package("ExoplanetsSysSim")),"..")), "data", "KeplerMAST_TargetProperties.csv")))
-  delete!(mast_df, [~(x in [:kepid, :contam]) for x in names(mast_df)])
-  df = join(df, mast_df, on=:kepid)
+
   StellarTable.set_star_table(df)
   end
-    println("# Removing stars observed <5 quarters.")
-    df[!,:wf_id] = map(x->ExoplanetsSysSim.WindowFunction.get_window_function_id(x,use_default_for_unknown=false),df[!,:kepid])
-    obs_5q = df[!,:wf_id].!=-1
-    df = df[obs_5q, names(df)]
-    StellarTable.set_star_table(df)
+    ## What's the TESS version of this? Since observing windows are super short anyway.
+
+    #println("# Removing stars observed <5 quarters.")
+    #df[!,:wf_id] = map(x->ExoplanetsSysSim.WindowFunction.get_window_function_id(x,use_default_for_unknown=false),df[!,:kepid])
+    #obs_5q = df[!,:wf_id].!=-1
+    #df = df[obs_5q, names(df)]
+    #StellarTable.set_star_table(df)
   return df
 end
 

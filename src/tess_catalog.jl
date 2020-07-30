@@ -204,19 +204,19 @@ function read_toi_catalog(filename::String, force_reread::Bool = false)
             # Choose which TOIs to keep
             #is_cand = (csv_data[!,:,toi_disposition_idx] .== "CONFIRMED") | (csv_data[!,:,toi_disposition_idx] .== "CANDIDATE")
             is_cand = df[!,:toi_pdisposition] .== "PC"
-            has_radius = .!ismissing.(df[!,:prad])
-            has_period = .!(ismissing.(df[!,:period]) .| ismissing.(df[!,:period_err]))
+            has_radius = .!ismissing.(df[!,:toi_prad])
+            has_period = .!(ismissing.(df[!,:toi_period]) .| ismissing.(df[!,:toi_period_err]))
 
             is_usable = .&(is_cand, has_radius, has_period)
             usable = findall(is_usable)
-           #  symbols_to_keep = [:ticid, :kepoi_name, :toi_pdisposition, :toi_score, :toi_ror, :toi_period, :toi_period_err1, :toi_period_err2, :toi_time0bk, :toi_time0bk_err1, :toi_time0bk_err2, :toi_depth, :toi_depth_err1, :toi_depth_err2, :toi_duration, :toi_duration_err1, :toi_duration_err2]
+           #  symbols_to_keep = [:TIC, :kepoi_name, :toi_pdisposition, :toi_score, :toi_ror, :toi_period, :toi_period_err1, :toi_period_err2, :toi_time0bk, :toi_time0bk_err1, :toi_time0bk_err2, :toi_depth, :toi_depth_err1, :toi_depth_err2, :toi_duration, :toi_duration_err1, :toi_duration_err2]
            # df = df[usable, symbols_to_keep]
            # tmp_df = DataFrame()
            # for col in names(df)
            #     tmp_df[col] = collect(skipmissing(df[col]))
            # end
            # df = tmp_df
-           # usable = collect(1:length(df[!,:ticid]))
+           # usable = collect(1:length(df[!,:TIC]))
         catch
             error(string("# Failed to read toi catalog >",filename,"< in ascii format."))
         end
@@ -231,7 +231,7 @@ Create (true) catalog of TESS observations of TESS targets
 
 # Arguments:
 - `df_star::DataFrame`: DataFrame containing all TESS target stars in catalog
-   NOTE: df_star is assumed to have fields ticid, mass and radius for all targets in the survey)
+   NOTE: df_star is assumed to have fields TIC, mass and radius for all targets in the survey)
 - `df_toi::DataFrame`: DataFrame containing all TESS Object of Interests (TOIs)
 - `usable_toi::Array{Integer}`: Array of TOI dataframe row indices corresponding to TOIs to use
 - `sim_param::SimParam`: Simulation parameter object
@@ -245,7 +245,7 @@ function setup_actual_pc_catalog_tess(df_star::DataFrame, df_toi::DataFrame, usa
 
     # Deprecated code to take a list of KepIDs and TOI names to pre-select a subset of TOIs
     # if haskey(sim_param, "toi_subset_csv")
-    #     toi_subset = fill(false, length(df_toi[!,:ticid]))
+    #     toi_subset = fill(false, length(df_toi[!,:TIC]))
 
     #     subset_df = readtable(convert(String,get(sim_param,"toi_subset_csv", "christiansen_kov.csv")), header=true, separator=' ')
 
@@ -277,10 +277,10 @@ function setup_actual_pc_catalog_tess(df_star::DataFrame, df_toi::DataFrame, usa
     # end
 
     output = TESSObsCatalog()
-    sort!(df_star, (:ticid))
-    df_obs = join(df_star, df_toi, on = :ticid)
-    #df_obs = sort!(df_obs, cols=(:ticid))
-    df_obs = sort!(df_obs, (:ticid))
+    sort!(df_star, (:ID))
+    # df_obs = join(df_star, df_toi, on = :ID => :TIC)
+    df_obs = innerjoin(df_star, df_toi, on=:ID => :TIC, makeunique=false, validate=(false, false))
+    df_obs = sort!(df_obs, (:ID))
 
     # if haskey(sim_param, "toi_subset_csv")
     #     tot_plan -= length(df_obs[!,:kepoi_name])
@@ -289,26 +289,25 @@ function setup_actual_pc_catalog_tess(df_star::DataFrame, df_toi::DataFrame, usa
 
     # Add each TOI planet candidate to TESS target object
     plid = 0
-    for i in 1:length(df_obs[!,:kepoi_name])
+    for i in 1:length(df_obs[!,:toi_id])
         if plid == 0
             plid = 1
-            while i+plid < length(df_obs[!,:kepoi_name]) && df_obs[i+plid,:ticid] == df_obs[i,:ticid]
+            while i+plid < length(df_obs[!,:toi_id]) && df_obs[i+plid,:ID] == df_obs[i,:ID]
                 plid += 1
             end
             num_pl = plid
             target_obs = TESSTargetObs(num_pl)
-	        #target_obs.star = ExoplanetsSysSim.StarObs(df_obs[i,:radius],df_obs[i,:mass],findfirst(df_star[!,:ticid], df_obs[i,:ticid]))
-            star_idx = searchsortedfirst(df_star[!,:ticid],df_obs[i,:ticid])
-            if star_idx > length(df_star[!,:ticid])
-                @warn "# Couldn't find ticid " * df_star[i,:ticid] * " in df_obs."
-                star_idx = rand(1:length(df_star[!,:ticid]))
+            star_idx = searchsortedfirst(df_star[!,:ID],df_obs[i,:ID])
+            if star_idx > length(df_star[!,:ID])
+                @warn "# Couldn't find TIC " * df_star[i,:ID] * " in df_obs."
+                star_idx = rand(1:length(df_star[!,:ID]))
             end
-            target_obs.star = ExoplanetsSysSim.StarObs(df_obs[i,:radius],df_obs[i,:mass],star_idx)
+            target_obs.star = ExoplanetsSysSim.StarObs(df_obs[i,:rad],df_obs[i,:mass],star_idx)
 
         end
 
-        target_obs.obs[plid] = ExoplanetsSysSim.TransitPlanetObs(df_obs[i,:toi_period],df_obs[i,:toi_time0bk],df_obs[i,:toi_depth]/1.0e6,df_obs[i,:toi_duration])
-        target_obs.sigma[plid] = ExoplanetsSysSim.TransitPlanetObs((abs(df_obs[i,:toi_period_err1])+abs(df_obs[i,:toi_period_err2]))/2,(abs(df_obs[i,:toi_time0bk_err1])+abs(df_obs[i,:toi_time0bk_err2]))/2,(abs(df_obs[i,:toi_depth_err1]/1.0e6)+abs(df_obs[i,:toi_depth_err2]/1.0e6))/2,(abs(df_obs[i,:toi_duration_err1])+abs(df_obs[i,:toi_duration_err2]))/2)
+        target_obs.obs[plid] = ExoplanetsSysSim.TransitPlanetObs(df_obs[i,:toi_period],df_obs[i,:epoch],df_obs[i,:toi_transit_depth]/1.0e6,df_obs[i,:toi_transit_dur])
+        target_obs.sigma[plid] = ExoplanetsSysSim.TransitPlanetObs((abs(df_obs[i,:toi_period_err]),(abs(df_obs[i,:epoch_err])),(abs(df_obs[i,:toi_transit_depth_err]/1.0e6)),(abs(df_obs[i,:toi_transit_dur_err]))))
 	#target_obs.prob_detect = ExoplanetsSysSim.SimulatedSystemDetectionProbs{OneObserver}( ones(num_pl), ones(num_pl,num_pl), ones(num_pl), fill(Array{Int64}(undef,0), 1) )  # Made line below to simplify calling
         target_obs.prob_detect = ExoplanetsSysSim.OneObserverSystemDetectionProbs(num_pl)
         plid -= 1
