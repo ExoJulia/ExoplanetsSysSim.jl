@@ -61,6 +61,12 @@ function setup(filename::String; force_reread::Bool = false)
   symbols_to_keep = [ :kepid, :mass, :mass_err1, :mass_err2, :radius, :radius_err1, :radius_err2, :dens, :dens_err1, :dens_err2, :rrmscdpp01p5, :rrmscdpp02p0, :rrmscdpp02p5, :rrmscdpp03p0, :rrmscdpp03p5, :rrmscdpp04p5, :rrmscdpp05p0, :rrmscdpp06p0, :rrmscdpp07p5, :rrmscdpp09p0, :rrmscdpp10p5, :rrmscdpp12p0, :rrmscdpp12p5, :rrmscdpp15p0, :cdppslplong, :cdppslpshrt, :dataspan, :dutycycle, :limbdark_coeff1, :limbdark_coeff2, :limbdark_coeff3, :limbdark_coeff4 ]
 
   delete!(df, [~(x in symbols_to_keep) for x in names(df)])    # delete columns that we won't be using anyway
+  # until I can put in actual TIC limb-darkening coefficients, am setting all of them to zero.
+  for ld in [:limbdark_coeff1, :limbdark_coeff2, :limbdark_coeff3, :limbdark_coeff4]
+    if !(ld in names(df))
+      df = insertcols!(df, ld=>0.0)
+    end
+  end
   is_usable = [ !any(ismissing.([ df[i,j] for j in 1:size(df,2) ])) for i in 1:size(df,1) ]
   usable = find(is_usable)
   df = df[usable, symbols_to_keep]

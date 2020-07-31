@@ -204,10 +204,12 @@ function read_toi_catalog(filename::String, force_reread::Bool = false)
             # Choose which TOIs to keep
             #is_cand = (csv_data[!,:,toi_disposition_idx] .== "CONFIRMED") | (csv_data[!,:,toi_disposition_idx] .== "CANDIDATE")
             is_cand = df[!,:toi_pdisposition] .== "PC"
+             # TODO: figure out a way to replace missing errors without zeroing them out (add in a baseline Price/Rogers variance?)
             has_radius = .!ismissing.(df[!,:toi_prad])
             has_period = .!(ismissing.(df[!,:toi_period]) .| ismissing.(df[!,:toi_period_err]))
-
-            is_usable = .&(is_cand, has_radius, has_period)
+            has_epoch = .!(ismissing.(df[!,:epoch]) .| ismissing.(df[!,:epoch_err]))
+            has_depth = .!(ismissing.(df[!,:toi_transit_depth]) .| ismissing.(df[!,:toi_transit_depth_err]))
+            is_usable = .&(is_cand, has_radius, has_period, has_depth, has_epoch)
             usable = findall(is_usable)
            #  symbols_to_keep = [:TIC, :kepoi_name, :toi_pdisposition, :toi_score, :toi_ror, :toi_period, :toi_period_err1, :toi_period_err2, :toi_time0bk, :toi_time0bk_err1, :toi_time0bk_err2, :toi_depth, :toi_depth_err1, :toi_depth_err2, :toi_duration, :toi_duration_err1, :toi_duration_err2]
            # df = df[usable, symbols_to_keep]
@@ -242,40 +244,6 @@ Create (true) catalog of TESS observations of TESS targets
 function setup_actual_pc_catalog_tess(df_star::DataFrame, df_toi::DataFrame, usable_toi::Array{Int64}, sim_param::SimParam)
     local target_obs, num_pl
     df_toi = df_toi[usable_toi,:]
-
-    # Deprecated code to take a list of KepIDs and TOI names to pre-select a subset of TOIs
-    # if haskey(sim_param, "toi_subset_csv")
-    #     toi_subset = fill(false, length(df_toi[!,:TIC]))
-
-    #     subset_df = readtable(convert(String,get(sim_param,"toi_subset_csv", "christiansen_kov.csv")), header=true, separator=' ')
-
-    #     for n in 1:length(subset_df[!,1])
-    #         subset_colnum = 1
-    #         subset_entry = findall(x->x==subset_df[n,1], df_toi[names(subset_df)[1]])
-    #         # println("Initial cut: ", subset_entry)
-    #         while (length(subset_entry) > 1) & (subset_colnum < length(names(subset_df)))
-    #             subset_colnum += 1
-
-    #             subsubset = findall(x->round(x*10.)==round(subset_df[n,subset_colnum]*10.), df_toi[subset_entry,names(subset_df)[subset_colnum]])
-    #             # println("Extra cut: ", subset_df[n,subset_colnum], " / ", df_toi[subset_entry,col_idx], " = ", subsubset)
-    #             subset_entry = subset_entry[subsubset]
-    #         end
-    #         if length(subset_entry) > 1
-    #             cand_sub = findall(x->x == "CANDIDATE",df_toi[subset_entry,:toi_pdisposition])
-    #             subset_entry = subset_entry[cand_sub]
-    #             if length(subset_entry) > 1
-    #                 println("# Multiple planets found in final cut: ", subset_df[n,1])
-    #             end
-    #         end
-    #         if length(subset_entry) < 1
-    #             println("# No planets found in final cut: ", subset_df[n,:])
-    #         end
-    #         toi_subset[subset_entry] = true
-    #     end
-    #     df_toi = df_toi[findall(toi_subset),:]
-    #     tot_plan = count(x->x, toi_subset)
-    # end
-
     output = TESSObsCatalog()
     sort!(df_star, (:ID))
     # df_obs = join(df_star, df_toi, on = :ID => :TIC)
@@ -307,7 +275,7 @@ function setup_actual_pc_catalog_tess(df_star::DataFrame, df_toi::DataFrame, usa
         end
 
         target_obs.obs[plid] = ExoplanetsSysSim.TransitPlanetObs(df_obs[i,:toi_period],df_obs[i,:epoch],df_obs[i,:toi_transit_depth]/1.0e6,df_obs[i,:toi_transit_dur])
-        target_obs.sigma[plid] = ExoplanetsSysSim.TransitPlanetObs((abs(df_obs[i,:toi_period_err]),(abs(df_obs[i,:epoch_err])),(abs(df_obs[i,:toi_transit_depth_err]/1.0e6)),(abs(df_obs[i,:toi_transit_dur_err]))))
+        target_obs.sigma[plid] = ExoplanetsSysSim.TransitPlanetObs(abs(df_obs[i,:toi_period_err]), abs(df_obs[i,:epoch_err]),abs(df_obs[i,:toi_transit_depth_err]/1.0e6),abs(df_obs[i,:toi_transit_dur_err]))
 	#target_obs.prob_detect = ExoplanetsSysSim.SimulatedSystemDetectionProbs{OneObserver}( ones(num_pl), ones(num_pl,num_pl), ones(num_pl), fill(Array{Int64}(undef,0), 1) )  # Made line below to simplify calling
         target_obs.prob_detect = ExoplanetsSysSim.OneObserverSystemDetectionProbs(num_pl)
         plid -= 1

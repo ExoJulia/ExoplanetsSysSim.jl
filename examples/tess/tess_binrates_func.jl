@@ -503,6 +503,17 @@ function setup_tic(filename::String; force_reread::Bool = false)
   # See options at: https://iopscience.iop.org/article/10.3847/1538-3881/aad050#ajaad050app2
   # note that they list Mass, Lum, Rad with capitals, but in the downloads from MAST they're lowercase mass, lum, rad.
   symbols_to_keep = [ :ID, :mass, :e_mass, :rad, :e_rad, :rho, :e_rho, :contratio]
+  # until I can put in actual TIC limb-darkening coefficients, am setting all of them to zero.
+  println("hi dinosaur")
+  println("has limbdarks")
+  ld_list = [:limbdark_coeff1, :limbdark_coeff2, :limbdark_coeff3, :limbdark_coeff4]
+  println(any([ld in names(df) for ld in ld_list]))
+  for ld in ld_list
+    df = insertcols!(df, ld=>0.0)
+  end
+  # df = insertcols!(df, :limbdark_coeff1=>0.0)
+  println("has limbdarks")
+  println(any([ld in names(df) for ld in ld_list]))
   # column_indicators = [~(x in symbols_to_keep) for x in names(df)]
   select!(df, symbols_to_keep)    # delete columns that we won't be using anyway
   usable = findall(is_usable)
