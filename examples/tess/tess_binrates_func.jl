@@ -453,7 +453,7 @@ function setup_tic(sim_param::SimParam; force_reread::Bool = false)
   if !haskey(sim_param.param,"num_targets_sim_pass_one")
       add_param_fixed(sim_param,"num_targets_sim_pass_one", StellarTable.num_usable_in_star_table())
   end
-  
+
   StellarTable.set_star_table(df)
   return df
 end
@@ -480,6 +480,7 @@ function setup_tic(filename::String; force_reread::Bool = false)
     error(string("# Failed to read stellar catalog >",filename,"< in ascii format."))
   end
 
+  println(names(df))
   ## issue here: the TIC does not have SNRs of each observation, because it's not tied to having observed them with TESS.
   ## workaround: grab the SNRs from the planetary catalog? Not 100% sure
   has_teff = .! (ismissing.(df[!, :Teff]))
@@ -487,7 +488,7 @@ function setup_tic(filename::String; force_reread::Bool = false)
   has_radius = .! (ismissing.(df[!, :rad]) .| ismissing.(df[!, :e_rad]))
   has_dens = .! (ismissing.(df[!, :rho]) .| ismissing.(df[!, :e_rho]))
   # has_cdpp = .! (ismissing.(df[:rrmscdpp01p5]) .| ismissing.(df[:rrmscdpp02p0]) .| ismissing.(df[:rrmscdpp02p5]) .| ismissing.(df[:rrmscdpp03p0]) .| ismissing.(df[:rrmscdpp03p5]) .| ismissing.(df[:rrmscdpp04p5]) .| ismissing.(df[:rrmscdpp05p0]) .| ismissing.(df[:rrmscdpp06p0]) .| ismissing.(df[:rrmscdpp07p5]) .| ismissing.(df[:rrmscdpp09p0]) .| ismissing.(df[:rrmscdpp10p5]) .| ismissing.(df[:rrmscdpp12p0]) .| ismissing.(df[:rrmscdpp12p5]) .| ismissing.(df[:rrmscdpp15p0]))
-  has_snr = .! (ismissing.(df[!, :snr]))
+  # has_snr = .! (ismissing.(df[!, :snr]))
   # has_ld = .! (ismissing.(df[:limbdark_coeff1]) .| ismissing.(df[:limbdark_coeff2]) .| ismissing.(df[:limbdark_coeff3]) .| ismissing.(df[:limbdark_coeff4]))
   has_rest = .! (ismissing.(df[!, :dataspan]) .| ismissing.(df[!, :dutycycle])) 
   in_Q1Q12 = []
@@ -500,11 +501,11 @@ function setup_tic(filename::String; force_reread::Bool = false)
       push!(is_FGK, false)
     end
   end
-  is_usable = has_radius .& is_FGK .& has_mass .& has_dens .& has_snr .& has_rest
+  is_usable = has_radius .& is_FGK .& has_mass .& has_dens .& has_rest #.& has_snr
 
   # See options at: https://iopscience.iop.org/article/10.3847/1538-3881/aad050#ajaad050app2
   # note that they list Mass, Lum, Rad with capitals, but in the downloads from MAST they're lowercase mass, lum, rad.
-  symbols_to_keep = [ :ID, :mass, :e_mass, :rad, :e_rad, :rho, :e_rho, :contratio, :dataspan, :dutycycle, :snr]
+  symbols_to_keep = [ :ID, :mass, :e_mass, :rad, :e_rad, :rho, :e_rho, :contratio, :dataspan, :dutycycle, :snr ]
   # until I can put in actual TIC limb-darkening coefficients, am setting all of them to zero.
   select!(df, symbols_to_keep)    # delete columns that we won't be using anyway
   rename!(df, ["contratio" => "contam", "rad" => "radius"]) # change TESS convention to Kepler
@@ -849,7 +850,7 @@ function cnt_np_bin(cat_obs::TESSObsCatalog, param::SimParam, verbose::Bool = tr
                     #else
                     #    wf_id = ExoplanetsSysSim.WindowFunction.get_window_function_id(ExoplanetsSysSim.StellarTable.star_table(star_id,:kepid))
                     #end
-	            tess_targ = TESSTarget([PlanetarySystem(star, pl_arr, orbit_arr)], snr,contam,data_span,duty_cycle)
+	            tess_targ = TESSTarget([PlanetarySystem(star, pl_arr, orbit_arr)], [snr],contam,data_span,duty_cycle)
 
 	            duration = ExoplanetsSysSim.calc_transit_duration(tess_targ,1,1)
 	            if duration <= 0.

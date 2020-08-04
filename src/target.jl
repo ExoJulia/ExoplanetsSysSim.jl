@@ -3,7 +3,9 @@
 
 #using Distributions
 
-struct TESSTarget
+abstract struct TargetAbstract
+
+struct TESSTarget <: TargetAbstract 
   sys::Vector{PlanetarySystemAbstract}
   snr::Array{Float64,1} # the SNR of observations in each sector?
   contam::Float64
@@ -12,7 +14,7 @@ struct TESSTarget
   # QUERY: do I need a window_function_id?
 end 
 
-struct KeplerTarget
+struct KeplerTarget <: TargetAbstract 
   #sys::PlanetarySystem   # Make array for planetary systems aroud multiple stars in one target?
   sys::Vector{PlanetarySystemAbstract}
   cdpp::Array{Float64,2} # fractional, not ppm; 2D to allow for multiple time scales, months, quarters or seasons/spacecraft rotation angles
@@ -30,15 +32,9 @@ struct KeplerTarget
   #dec::Floa64           #
 end
 
-num_planets(t::KeplerTarget) = sum( num_planets, t.sys)
-flux(t::KeplerTarget) = sum(flux,t.sys)+t.contam
-
-num_planets(t::TESSTarget) = sum( num_planets, t.sys)
-flux(t::TESSTarget) = sum(flux,t.sys)+t.contam
-
-star_table(t::KeplerTarget, sym::Symbol) = StellarTable.star_table(t.sys[1].star.id,sym)
-star_table(t::TESSTarget, sym::Symbol) = StellarTable.star_table(t.sys[1].star.id,sym)
-
+num_planets(t::T) where {T<:TargetAbstract} = sum( num_planets, t.sys)
+flux(t::T) where {T<:TargetAbstract} = sum(flux,t.sys)+t.contam
+star_table(t::KeplerTarget, sym::Symbol) where {T<:TargetAbstract} =  StellarTable.star_table(t.sys[1].star.id,sym)
 
 function draw_asymmetric_normal(mu::Real, sig_plus::Real, sig_minus::Real; rn = randn() )
   @assert sig_minus >= zero(sig_minus)
@@ -169,7 +165,8 @@ function generate_tess_target_from_table(sim_param::SimParam)
   ld = LimbDarkeningParam4thOrder(star_table(star_id,:limbdark_coeff1), star_table(star_id,:limbdark_coeff2), star_table(star_id,:limbdark_coeff3), star_table(star_id,:limbdark_coeff4) )
   star = SingleStar(radius,mass,1.0,ld,star_id)     # TODO SCI: Allow for blends, binaries, etc.
   # cdpp_arr = make_cdpp_array_empty(star_id) # Note: Now leaving this field empty out and looking up each time via interpolate_cdpp_to_duration_lookup_cdpp instead of interpolate_cdpp_to_duration_use_target_cdpp
-  snr_arr = zeros(size(star_table(star_id, :sectors)))
+  # snr_arr = zeros(size(star_table(star_id, :sectors)))
+  snr_arr = 7.1 * ones(size(star_table(star_id, :sectors)))
   contam = star_table(star_id, :contam)
   data_span = star_table(star_id, :dataspan)
   duty_cycle = star_table(star_id, :dutycycle)
