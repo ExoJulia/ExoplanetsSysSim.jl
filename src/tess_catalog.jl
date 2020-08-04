@@ -247,7 +247,7 @@ function setup_actual_pc_catalog_tess(df_star::DataFrame, df_toi::DataFrame, usa
     output = TESSObsCatalog()
     sort!(df_star, (:ID))
     # df_obs = join(df_star, df_toi, on = :ID => :TIC)
-    df_obs = innerjoin(df_star, df_toi, on=:ID => :TIC, makeunique=false, validate=(false, false))
+    df_obs = innerjoin(select!(df_star, Not(:snr)), df_toi, on=:ID => :TIC, makeunique=false, validate=(false, false))
     df_obs = sort!(df_obs, (:ID))
 
     # if haskey(sim_param, "toi_subset_csv")
@@ -270,7 +270,7 @@ function setup_actual_pc_catalog_tess(df_star::DataFrame, df_toi::DataFrame, usa
                 @warn "# Couldn't find TIC " * df_star[i,:ID] * " in df_obs."
                 star_idx = rand(1:length(df_star[!,:ID]))
             end
-            target_obs.star = ExoplanetsSysSim.StarObs(df_obs[i,:rad],df_obs[i,:mass],star_idx)
+            target_obs.star = ExoplanetsSysSim.StarObs(df_obs[i,:toi_prad],df_obs[i,:mass],star_idx)
 
         end
 
