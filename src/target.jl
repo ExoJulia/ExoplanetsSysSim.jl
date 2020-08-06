@@ -3,7 +3,7 @@
 
 #using Distributions
 
-abstract struct TargetAbstract
+abstract type TargetAbstract end
 
 struct TESSTarget <: TargetAbstract 
   sys::Vector{PlanetarySystemAbstract}

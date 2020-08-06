@@ -480,7 +480,6 @@ function setup_tic(filename::String; force_reread::Bool = false)
     error(string("# Failed to read stellar catalog >",filename,"< in ascii format."))
   end
 
-  println(names(df))
   ## issue here: the TIC does not have SNRs of each observation, because it's not tied to having observed them with TESS.
   ## workaround: grab the SNRs from the planetary catalog? Not 100% sure
   has_teff = .! (ismissing.(df[!, :Teff]))
