@@ -524,7 +524,7 @@ function setup_dr25(filename::String; force_reread::Bool = false)
   df = tmp_df
   mast_df = CSV.read(convert(String,joinpath(abspath(joinpath(dirname(Base.find_package("ExoplanetsSysSim")),"..")), "data", "KeplerMAST_TargetProperties.csv")))
   delete!(mast_df, [~(x in [:kepid, :contam]) for x in names(mast_df)])
-  df = join(df, mast_df, on=:kepid)
+  df = innerjoin(df, mast_df, on=kepid, makeunique=false, validate=(false,false))
   StellarTable.set_star_table(df)
   end
     println("# Removing stars observed <5 quarters.")
@@ -827,6 +827,10 @@ function cnt_np_bin(cat_obs::KeplerObsCatalog, param::SimParam, verbose::Bool = 
             
             pbin = findfirst(x -> ((pper > limitP[x]) && (pper < limitP[x+1])), collect(1:(length(limitP)-1)))
             rbin = findfirst(x -> ((prad > limitRp[x]) && (prad < limitRp[x+1])), collect(1:(length(limitRp)-1)))
+            
+            if isnothing(pbin) || isnothing(rbin)
+              
+                        
             if (pbin > 0 && rbin > 0)
                 cnt_bin[(pbin-1)*(length(limitRp)-1) + rbin] += 1
                 pgeo = ExoplanetsSysSim.calc_transit_prob_single_planet_approx(pper, cat_obs.target[i].star.radius, cat_obs.target[i].star.mass)
