@@ -582,7 +582,7 @@ function setup_dr25(filename::String; force_reread::Bool = false)
   df = tmp_df
   mast_df = CSV.read(convert(String,joinpath(abspath(joinpath(dirname(Base.find_package("ExoplanetsSysSim")),"..")), "data", "KeplerMAST_TargetProperties.csv")))
   delete!(mast_df, [~(x in [:kepid, :contam]) for x in names(mast_df)])
-  df = join(df, mast_df, on=:kepid)
+  df = innerjoin(df, mast_df, on=kepid, makeunique=false, validate=(false,false))
   StellarTable.set_star_table(df)
   end
     println("# Removing stars observed <5 quarters.")
