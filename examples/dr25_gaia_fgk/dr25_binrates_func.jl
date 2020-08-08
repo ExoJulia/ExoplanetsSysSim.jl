@@ -829,7 +829,7 @@ function cnt_np_bin(cat_obs::KeplerObsCatalog, param::SimParam, verbose::Bool = 
             rbin = findfirst(x -> ((prad > limitRp[x]) && (prad < limitRp[x+1])), collect(1:(length(limitRp)-1)))
             
             if !(isnothing(pbin) || isnothing(rbin))            
-              if (pbin > 0 && rbin > 0)
+                if (pbin > 0 && rbin > 0)
                   cnt_bin[(pbin-1)*(length(limitRp)-1) + rbin] += 1
                   pgeo = ExoplanetsSysSim.calc_transit_prob_single_planet_approx(pper, cat_obs.target[i].star.radius, cat_obs.target[i].star.mass)
                   pdet = 0.0
@@ -851,29 +851,34 @@ function cnt_np_bin(cat_obs::KeplerObsCatalog, param::SimParam, verbose::Bool = 
                     else
                         wf_id = ExoplanetsSysSim.WindowFunction.get_window_function_id(ExoplanetsSysSim.StellarTable.star_table(star_id,:kepid))
                     end
-                kep_targ = KeplerTarget([PlanetarySystem(star, pl_arr, orbit_arr)], repeat(cdpp_arr, outer=[1,1]),contam,data_span,duty_cycle,wf_id)
-                      
-                duration = ExoplanetsSysSim.calc_transit_duration(kep_targ,1,1) 
-                if duration <= 0.
-                    continue
-                end
-                ntr = ExoplanetsSysSim.calc_expected_num_transits(kep_targ, 1, 1, param)
-                depth = ExoplanetsSysSim.calc_transit_depth(kep_targ,1,1)
-                      cdpp = ExoplanetsSysSim.interpolate_cdpp_to_duration_lookup_cdpp(kep_targ, duration)
-                      #cdpp = ExoplanetsSysSim.interpolate_cdpp_to_duration(kep_targ, duration)
-                      snr = ExoplanetsSysSim.calc_snr_if_transit_cdpp(kep_targ, depth, duration, cdpp, param, num_transit=ntr)
-                pdet += ExoplanetsSysSim.calc_prob_detect_if_transit(kep_targ, snr, pper, duration, param, num_transit=ntr)
-            end
-                np_bin[(pbin-1)*(length(limitRp)-1) + rbin] += 1.0/pgeo/(pdet/num_targ)
-                if verbose
-	            println("Planet ",pl_idx," => Bin ", (pbin-1)*(length(limitRp)-1) + rbin, ", C = ", 1.0/pgeo/(pdet/num_targ))
-                end
-	        pl_idx += 1
-            end
-        end
-    end
+                    kep_targ = KeplerTarget([PlanetarySystem(star, pl_arr, orbit_arr)], repeat(cdpp_arr, outer=[1,1]),contam,data_span,duty_cycle,wf_id)  
+                    duration = ExoplanetsSysSim.calc_transit_duration(kep_targ,1,1) 
+                    if duration <= 0.
+                        continue
+                    end
+                    ntr = ExoplanetsSysSim.calc_expected_num_transits(kep_targ, 1, 1, param)
+                    depth = ExoplanetsSysSim.calc_transit_depth(kep_targ,1,1)
+                    cdpp = ExoplanetsSysSim.interpolate_cdpp_to_duration_lookup_cdpp(kep_targ, duration)
+                    #cdpp = ExoplanetsSysSim.interpolate_cdpp_to_duration(kep_targ, duration)
+                    snr = ExoplanetsSysSim.calc_snr_if_transit_cdpp(kep_targ, depth, duration, cdpp, param, num_transit=ntr)
+                    pdet += ExoplanetsSysSim.calc_prob_detect_if_transit(kep_targ, snr, pper, duration, param, num_transit=ntr)
+                    np_bin[(pbin-1)*(length(limitRp)-1) + rbin] += 1.0/pgeo/(pdet/num_targ)
+                    if verbose
+                      println("Planet ",pl_idx," => Bin ", (pbin-1)*(length(limitRp)-1) + rbin, ", C = ", 1.0/pgeo/(pdet/num_targ))
+                    end
+                    pl_idx += 1
+                  end # for star_id in 1:num_targ
+                else
+                  if verbose
+                    println("Planet ",pl_idx," skipped due to value out of range")
+                    pl_idx += 1
+                  end
+                end # if pbin
+            end # if !isnothing
+        end # for j
+    end # for i
     return cnt_bin, np_bin
-end
+end # function
 
 ## stellar catalog ess (simple bayesian)
 function stellar_ess(param::SimParam, verbose::Bool = true)
@@ -911,7 +916,7 @@ function stellar_ess(param::SimParam, verbose::Bool = true)
 	
 	  pl_arr = Array{Planet}(undef,1)
 	  orbit_arr = Array{Orbit}(undef,1)
-          incl = acos(Base.rand()*star.radius*ExoplanetsSysSim.rsol_in_au/ExoplanetsSysSim.semimajor_axis(pper, star.mass))
+          incl = acos(min(1, Base.rand()*star.radius*ExoplanetsSysSim.rsol_in_au/ExoplanetsSysSim.semimajor_axis(pper, star.mass)))
 	  orbit_arr[1] = Orbit(pper, 0., incl, 0., 0., Base.rand()*2.0*pi)
 	  pl_arr[1] = Planet(prad, 1.0e-6)  
 	  kep_targ = KeplerTarget([PlanetarySystem(star, pl_arr, orbit_arr)], repeat(cdpp_arr, outer=[1,1]),contam,data_span,duty_cycle,wf_id)

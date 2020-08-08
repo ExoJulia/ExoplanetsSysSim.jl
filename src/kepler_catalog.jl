@@ -313,7 +313,7 @@ function setup_actual_pc_catalog_kepler(df_star::DataFrame, df_koi::DataFrame, u
 
     output = KeplerObsCatalog()
     sort!(df_star, (:kepid))
-    df_obs = join(df_star, df_koi, on = :kepid)
+    df_obs = innerjoin(df_star, df_koi, on = :kepid)
     #df_obs = sort!(df_obs, cols=(:kepid))
     df_obs = sort!(df_obs, (:kepid))
 
