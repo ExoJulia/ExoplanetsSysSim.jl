@@ -516,6 +516,11 @@ function calc_prob_detect_if_transit(t::KeplerTarget, snr::Float64, period::Floa
   return wf*detection_efficiency_model(snr, num_transit, min_pdet_nonzero=min_pdet_nonzero)
 end
 
+function calc_prob_detect_if_transit(t::TESSTarget, snr::Array{Float64,1}, period::Float64, duration::Float64, sim_param::SimParam; num_transit::Float64 = 1)
+    # WARNING: just returns 1, until prob_detect for TESS is properly defined
+    return 1
+end
+
 function calc_prob_detect_if_transit(t::KeplerTarget, depth::Float64, period::Float64, duration::Float64, osd::Float64, sim_param::SimParam; num_transit::Float64 = 1)
   snr = calc_snr_if_transit(t,depth,duration,osd, sim_param, num_transit=num_transit)
   return calc_prob_detect_if_transit(t, snr, period, duration, sim_param, num_transit=num_transit)

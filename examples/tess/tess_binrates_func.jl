@@ -597,7 +597,6 @@ function calc_summary_stats_obs_binned_rates(cat_obs::TESSObsCatalog, param::Sim
       end
     end
   else
-    println(ExoplanetsSysSim.StellarTable.columns_in_star_table())
     for i in idx_tranets
       ld = ExoplanetsSysSim.LimbDarkeningParam4thOrder(ExoplanetsSysSim.StellarTable.star_table(cat_obs.target[i].star.id,:limbdark_coeff1), ExoplanetsSysSim.StellarTable.star_table(cat_obs.target[i].star.id,:limbdark_coeff2), ExoplanetsSysSim.StellarTable.star_table(cat_obs.target[i].star.id,:limbdark_coeff3), ExoplanetsSysSim.StellarTable.star_table(cat_obs.target[i].star.id,:limbdark_coeff4) )
       flux_ratio = (1.0+ExoplanetsSysSim.StellarTable.star_table(cat_obs.target[i].star.id, :contam))/1.0 # WARNING: Assumes flux = 1
@@ -805,71 +804,75 @@ end
 
 ## cnt_bin & np_bin (inverse detection & simple bayesian)
 function cnt_np_bin(cat_obs::TESSObsCatalog, param::SimParam, verbose::Bool = true)
-    num_targ = ExoplanetsSysSim.StellarTable.num_usable_in_star_table()
-    idx_tranets = findall(x::TESSTargetObs-> length(x.obs) > 0, cat_obs.target)::Array{Int64,1}
+  num_targ = ExoplanetsSysSim.StellarTable.num_usable_in_star_table()
+  idx_tranets = findall(x::TESSTargetObs-> length(x.obs) > 0, cat_obs.target)::Array{Int64,1} 
 
-    limitP::Array{Float64,1} = get_any(param, "p_lim_arr", Array{Float64,1})
-    limitRp::Array{Float64,1} = get_any(param, "r_lim_arr", Array{Float64,1})
+  limitP::Array{Float64,1} = get_any(param, "p_lim_arr", Array{Float64,1})
+  limitRp::Array{Float64,1} = get_any(param, "r_lim_arr", Array{Float64,1})
 
-    np_bin = zeros((length(limitP)-1) * (length(limitRp)-1))
-    cnt_bin = zeros((length(limitP)-1) * (length(limitRp)-1))
-    pl_idx = 1
+  np_bin = zeros((length(limitP)-1) * (length(limitRp)-1))
+  cnt_bin = zeros((length(limitP)-1) * (length(limitRp)-1))
+  pl_idx = 1
 
-    println("Calculating completeness for each planet...")
-    for i in idx_tranets
-        for j in 1:num_planets(cat_obs.target[i])
-            pper = cat_obs.target[i].obs[j].period
-            prad = sqrt(cat_obs.target[i].obs[j].depth)*cat_obs.target[i].star.radius
-
-            pbin = findfirst(x -> ((pper > limitP[x]) && (pper < limitP[x+1])), collect(1:(length(limitP)-1)))
-            rbin = findfirst(x -> ((prad > limitRp[x]) && (prad < limitRp[x+1])), collect(1:(length(limitRp)-1)))
-
+  println("Calculating completeness for each planet...")
+  for i in idx_tranets
+      for j in 1:num_planets(cat_obs.target[i])
+          pper = cat_obs.target[i].obs[j].period
+          prad = sqrt(cat_obs.target[i].obs[j].depth)*cat_obs.target[i].star.radius
+          
+          pbin = findfirst(x -> ((pper > limitP[x]) && (pper < limitP[x+1])), collect(1:(length(limitP)-1)))
+          rbin = findfirst(x -> ((prad > limitRp[x]) && (prad < limitRp[x+1])), collect(1:(length(limitRp)-1)))
+          
+          if !(isnothing(pbin) || isnothing(rbin))            
             if (pbin > 0 && rbin > 0)
                 cnt_bin[(pbin-1)*(length(limitRp)-1) + rbin] += 1
                 pgeo = ExoplanetsSysSim.calc_transit_prob_single_planet_approx(pper, cat_obs.target[i].star.radius, cat_obs.target[i].star.mass)
-	        pdet = 0.0
-	        for star_id in 1:num_targ
-                    ld = ExoplanetsSysSim.LimbDarkeningParam4thOrder(ExoplanetsSysSim.StellarTable.star_table(star_id,:limbdark_coeff1), ExoplanetsSysSim.StellarTable.star_table(star_id,:limbdark_coeff2), ExoplanetsSysSim.StellarTable.star_table(star_id,:limbdark_coeff3), ExoplanetsSysSim.StellarTable.star_table(star_id,:limbdark_coeff4) )
-	            star = SingleStar(ExoplanetsSysSim.StellarTable.star_table(star_id,:radius),ExoplanetsSysSim.StellarTable.star_table(star_id,:mass),1.0, ld, star_id)
-                    cdpp_arr = ExoplanetsSysSim.make_cdpp_array_empty(star_id)#(1.0e-6*sqrt(1.0 / 24.0 / ExoplanetsSysSim.LC_duration)) .* [ExoplanetsSysSim.StellarTable.star_table(star_id, :rrmscdpp01p5)*sqrt(1.5), ExoplanetsSysSim.StellarTable.star_table(star_id, :rrmscdpp02p0)*sqrt(2.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp02p5)*sqrt(2.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp03p0)*sqrt(3.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp03p5)*sqrt(3.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp04p5)*sqrt(4.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp05p0)*sqrt(5.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp06p0)*sqrt(6.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp07p5)*sqrt(7.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp09p0)*sqrt(9.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp10p5)*sqrt(10.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp12p0)*sqrt(12.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp12p5)*sqrt(12.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp15p0)*sqrt(15.)]
-                    #cdpp = 1.0e-6 * ExoplanetsSysSim.StellarTable.star_table(star_id, :rrmscdpp04p5) * sqrt(4.5/24.0 / ExoplanetsSysSim.LC_duration )
-	            contam = 0.0
-	            data_span = ExoplanetsSysSim.StellarTable.star_table(star_id, :dataspan)
-              duty_cycle = ExoplanetsSysSim.StellarTable.star_table(star_id, :dutycycle)
-              println(ExoplanetsSysSim.StellarTable.columns_in_star_table())
-              snr = ExoplanetsSysSim.StellarTable.star_table(star_id, :snr)
-	            pl_arr = Array{Planet}(undef,1)
-	            orbit_arr = Array{Orbit}(undef,1)
-                    incl = acos(Base.rand()*star.radius*ExoplanetsSysSim.rsol_in_au/ExoplanetsSysSim.semimajor_axis(pper, star.mass))
-	            orbit_arr[1] = Orbit(pper, 0., incl, 0., 0., Base.rand()*2.0*pi)
-              pl_arr[1] = Planet(prad, 1.0e-6)
-              ## taking windowing out for now as I don't know how it applies to TESS
-                    #if ExoplanetsSysSim.StellarTable.star_table_has_key(:wf_id)
-                    #    wf_id = ExoplanetsSysSim.StellarTable.star_table(star_id,:wf_id)
-                    #else
-                    #    wf_id = ExoplanetsSysSim.WindowFunction.get_window_function_id(ExoplanetsSysSim.StellarTable.star_table(star_id,:kepid))
-                    #end
-	            tess_targ = TESSTarget([PlanetarySystem(star, pl_arr, orbit_arr)], [snr],contam,data_span,duty_cycle)
+                pdet = 0.0
+                for star_id in 1:num_targ
+                  ld = ExoplanetsSysSim.LimbDarkeningParam4thOrder(ExoplanetsSysSim.StellarTable.star_table(star_id,:limbdark_coeff1), ExoplanetsSysSim.StellarTable.star_table(star_id,:limbdark_coeff2), ExoplanetsSysSim.StellarTable.star_table(star_id,:limbdark_coeff3), ExoplanetsSysSim.StellarTable.star_table(star_id,:limbdark_coeff4) )
+                  star = SingleStar(ExoplanetsSysSim.StellarTable.star_table(star_id,:radius),ExoplanetsSysSim.StellarTable.star_table(star_id,:mass),1.0, ld, star_id)
+                  # cdpp_arr = ExoplanetsSysSim.make_cdpp_array_empty(star_id)#(1.0e-6*sqrt(1.0 / 24.0 / ExoplanetsSysSim.LC_duration)) .* [ExoplanetsSysSim.StellarTable.star_table(star_id, :rrmscdpp01p5)*sqrt(1.5), ExoplanetsSysSim.StellarTable.star_table(star_id, :rrmscdpp02p0)*sqrt(2.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp02p5)*sqrt(2.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp03p0)*sqrt(3.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp03p5)*sqrt(3.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp04p5)*sqrt(4.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp05p0)*sqrt(5.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp06p0)*sqrt(6.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp07p5)*sqrt(7.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp09p0)*sqrt(9.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp10p5)*sqrt(10.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp12p0)*sqrt(12.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp12p5)*sqrt(12.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp15p0)*sqrt(15.)]
+                  snr = [ExoplanetsSysSim.StellarTable.star_table(star_id, :snr)]
+                  #cdpp = 1.0e-6 * ExoplanetsSysSim.StellarTable.star_table(star_id, :rrmscdpp04p5) * sqrt(4.5/24.0 / ExoplanetsSysSim.LC_duration )
+                  contam = 0.0
+                  data_span = ExoplanetsSysSim.StellarTable.star_table(star_id, :dataspan)
+                  duty_cycle = ExoplanetsSysSim.StellarTable.star_table(star_id, :dutycycle)
+                  pl_arr = Array{Planet}(undef,1)
+                  orbit_arr = Array{Orbit}(undef,1)
+                  incl = acos(min(1, Base.rand()*star.radius*ExoplanetsSysSim.rsol_in_au/ExoplanetsSysSim.semimajor_axis(pper, star.mass)))
+                  orbit_arr[1] = Orbit(pper, 0., incl, 0., 0., Base.rand()*2.0*pi)
+                  pl_arr[1] = Planet(prad, 1.0e-6)
+                  #if ExoplanetsSysSim.StellarTable.star_table_has_key(:wf_id)
+                  #    wf_id = ExoplanetsSysSim.StellarTable.star_table(star_id,:wf_id)
+                  #else
+                  #    wf_id = ExoplanetsSysSim.WindowFunction.get_window_function_id(ExoplanetsSysSim.StellarTable.star_table(star_id,:ID))
+                  #end # if star_table_has_key
+                  tess_targ = TESSTarget([PlanetarySystem(star, pl_arr, orbit_arr)], snr, contam, data_span, duty_cycle)
+                      
+                  duration = ExoplanetsSysSim.calc_transit_duration(tess_targ,1,1) 
+                  if duration <= 0.
+                      continue
+                  end
 
-	            duration = ExoplanetsSysSim.calc_transit_duration(tess_targ,1,1)
-	            if duration <= 0.
-	                continue
-	            end
-	            ntr = ExoplanetsSysSim.calc_expected_num_transits(tess_targ, 1, 1, param)
-	            depth = ExoplanetsSysSim.calc_transit_depth(tess_targ,1,1)
-                    #cdpp = ExoplanetsSysSim.interpolate_cdpp_to_duration(tess_targ, duration)
-                    snr = # dinosaur
-	            pdet += ExoplanetsSysSim.calc_prob_detect_if_transit(tess_targ, snr, pper, duration, param, num_transit=ntr)
-	        end
+                  ntr = ExoplanetsSysSim.calc_expected_num_transits(tess_targ, 1, 1, param)
+                  depth = ExoplanetsSysSim.calc_transit_depth(tess_targ,1,1)
+                  pdet += ExoplanetsSysSim.calc_prob_detect_if_transit(tess_targ, snr, pper, duration, param, num_transit=ntr)
+                end # for
                 np_bin[(pbin-1)*(length(limitRp)-1) + rbin] += 1.0/pgeo/(pdet/num_targ)
                 if verbose
-	            println("Planet ",pl_idx," => Bin ", (pbin-1)*(length(limitRp)-1) + rbin, ", C = ", 1.0/pgeo/(pdet/num_targ))
+                    println("Planet ",pl_idx," => Bin ", (pbin-1)*(length(limitRp)-1) + rbin, ", C = ", 1.0/pgeo/(pdet/num_targ))
                 end
-	        pl_idx += 1
-            end
-        end
-    end
-    return cnt_bin, np_bin
+                pl_idx += 1
+            else 
+                pl_idx += 1
+                if verbose
+                  println("Skipping planet ", pl_idx, ": out of bounds")
+                end # if verbose
+            end # if bins > 0
+        end # !isnothing
+    end # for j
+end # for i
+return cnt_bin, np_bin
 end
 
 ## stellar catalog ess (simple bayesian)
@@ -886,15 +889,16 @@ function stellar_ess(param::SimParam, verbose::Bool = true)
   for star_id in 1:num_targ
     ld = ExoplanetsSysSim.LimbDarkeningParam4thOrder(ExoplanetsSysSim.StellarTable.star_table(star_id,:limbdark_coeff1), ExoplanetsSysSim.StellarTable.star_table(star_id,:limbdark_coeff2), ExoplanetsSysSim.StellarTable.star_table(star_id,:limbdark_coeff3), ExoplanetsSysSim.StellarTable.star_table(star_id,:limbdark_coeff4) )
     star = SingleStar(ExoplanetsSysSim.StellarTable.star_table(star_id,:radius),ExoplanetsSysSim.StellarTable.star_table(star_id,:mass),1.0, ld, star_id)
-    cdpp_arr = ExoplanetsSysSim.make_cdpp_array_empty(star_id)#(1.0e-6*sqrt(1.0/24.0/ExoplanetsSysSim.LC_duration)) .* [ExoplanetsSysSim.StellarTable.star_table(star_id, :rrmscdpp01p5)*sqrt(1.5), ExoplanetsSysSim.StellarTable.star_table(star_id, :rrmscdpp02p0)*sqrt(2.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp02p5)*sqrt(2.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp03p0)*sqrt(3.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp03p5)*sqrt(3.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp04p5)*sqrt(4.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp05p0)*sqrt(5.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp06p0)*sqrt(6.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp07p5)*sqrt(7.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp09p0)*sqrt(9.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp10p5)*sqrt(10.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp12p0)*sqrt(12.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp12p5)*sqrt(12.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp15p0)*sqrt(15.)]
+    #cdpp_arr = ExoplanetsSysSim.make_cdpp_array_empty(star_id)#(1.0e-6*sqrt(1.0/24.0/ExoplanetsSysSim.LC_duration)) .* [ExoplanetsSysSim.StellarTable.star_table(star_id, :rrmscdpp01p5)*sqrt(1.5), ExoplanetsSysSim.StellarTable.star_table(star_id, :rrmscdpp02p0)*sqrt(2.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp02p5)*sqrt(2.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp03p0)*sqrt(3.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp03p5)*sqrt(3.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp04p5)*sqrt(4.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp05p0)*sqrt(5.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp06p0)*sqrt(6.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp07p5)*sqrt(7.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp09p0)*sqrt(9.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp10p5)*sqrt(10.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp12p0)*sqrt(12.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp12p5)*sqrt(12.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp15p0)*sqrt(15.)]
     contam = 0.0
+    snr = ExoplanetsSysSim.StellarTable.star_table(star_id, :snr)
     data_span = ExoplanetsSysSim.StellarTable.star_table(star_id, :dataspan)
     duty_cycle = ExoplanetsSysSim.StellarTable.star_table(star_id, :dutycycle)
-    if ExoplanetsSysSim.StellarTable.star_table_has_key(:wf_id)
-        wf_id = ExoplanetsSysSim.StellarTable.star_table(star_id,:wf_id)
-    else
-        wf_id = ExoplanetsSysSim.WindowFunction.get_window_function_id(ExoplanetsSysSim.StellarTable.star_table(star_id,:kepid))
-    end
+    #if ExoplanetsSysSim.StellarTable.star_table_has_key(:wf_id)
+    #    wf_id = ExoplanetsSysSim.StellarTable.star_table(star_id,:wf_id)
+    #else
+    #    wf_id = ExoplanetsSysSim.WindowFunction.get_window_function_id(ExoplanetsSysSim.StellarTable.star_table(star_id,:ID))
+    #end
 
     for i_idx in 1:(length(limitP)-1)
       for j_idx in 1:(length(limitRp)-1)
@@ -908,10 +912,10 @@ function stellar_ess(param::SimParam, verbose::Bool = true)
 
 	  pl_arr = Array{Planet}(undef,1)
 	  orbit_arr = Array{Orbit}(undef,1)
-          incl = acos(Base.rand()*star.radius*ExoplanetsSysSim.rsol_in_au/ExoplanetsSysSim.semimajor_axis(pper, star.mass))
+    incl = acos(min(1, Base.rand()*star.radius*ExoplanetsSysSim.rsol_in_au/ExoplanetsSysSim.semimajor_axis(pper, star.mass)))
 	  orbit_arr[1] = Orbit(pper, 0., incl, 0., 0., Base.rand()*2.0*pi)
 	  pl_arr[1] = Planet(prad, 1.0e-6)
-	  tess_targ = TESSTarget([PlanetarySystem(star, pl_arr, orbit_arr)], repeat(cdpp_arr, outer=[1,1]),contam,data_span,duty_cycle,wf_id)
+	  tess_targ = TESSTarget([PlanetarySystem(star, pl_arr, orbit_arr)], [snr],contam,data_span,duty_cycle)
 
 	  duration = ExoplanetsSysSim.calc_transit_duration(tess_targ,1,1)
 	  if duration <= 0.
@@ -926,8 +930,8 @@ function stellar_ess(param::SimParam, verbose::Bool = true)
           depth *= snr_correction
 
           #cdpp = ExoplanetsSysSim.interpolate_cdpp_to_duration(tess_targ, duration)
-          cdpp = ExoplanetsSysSim.interpolate_cdpp_to_duration_lookup_cdpp(tess_targ, duration)
-          snr = ExoplanetsSysSim.calc_snr_if_transit_cdpp(tess_targ, depth, duration, cdpp, param, num_transit=ntr)
+          # cdpp = ExoplanetsSysSim.interpolate_cdpp_to_duration_lookup_cdpp(tess_targ, duration)
+          # snr = ExoplanetsSysSim.calc_snr_if_transit_cdpp(tess_targ, depth, duration, cdpp, param, num_transit=ntr)
           #kepid = ExoplanetsSysSim.StellarTable.star_table(tess_targ.sys[1].star.id, :kepid)
           #osd_duration = ExoplanetsSysSim.get_legal_durations(pper,duration)	#tests if durations are included in Kepler's observations for a certain planet period. If not, returns nearest possible duration
           #osd = ExoplanetsSysSim.WindowFunction.interp_OSD_from_table(kepid, pper, osd_duration)
@@ -935,7 +939,7 @@ function stellar_ess(param::SimParam, verbose::Bool = true)
 	  #   osd = osd*osd_duration/duration
           #end
           #snr = ExoplanetsSysSim.calc_snr_if_transit(tess_targ, depth, duration, osd, sim_param, num_transit=ntr)
-	  pdet = ExoplanetsSysSim.calc_prob_detect_if_transit(tess_targ, snr, pper, duration, param, num_transit=ntr)
+	  pdet = ExoplanetsSysSim.calc_prob_detect_if_transit(tess_targ, [snr], pper, duration, param, num_transit=ntr)
 
 	  temp_bin += (pgeo*pdet)
         end
