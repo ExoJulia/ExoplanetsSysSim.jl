@@ -516,9 +516,9 @@ function calc_prob_detect_if_transit(t::KeplerTarget, snr::Float64, period::Floa
   return wf*detection_efficiency_model(snr, num_transit, min_pdet_nonzero=min_pdet_nonzero)
 end
 
-function calc_prob_detect_if_transit(t::TESSTarget, snr::Array{Float64,1}, period::Float64, duration::Float64, sim_param::SimParam; num_transit::Float64 = 1)
-    # WARNING: just returns 1, until prob_detect for TESS is properly defined
-    return 1
+function calc_prob_detect_if_transit(t::TESSTarget, snr::Float64, period::Float64, duration::Float64, sim_param::SimParam, num_transit::Float64 = -1)
+    min_pdet_nonzero = 1.0e-4                                                # TODO OPT: Consider raising threshold to prevent a plethora of planets that are very unlikely to be detected due to using 0.0 or other small value here
+    return detection_efficiency_model(snr, round(Int64, tess_sector_duration / period), min_pdet_nonzero=min_pdet_nonzero)
 end
 
 function calc_prob_detect_if_transit(t::KeplerTarget, depth::Float64, period::Float64, duration::Float64, osd::Float64, sim_param::SimParam; num_transit::Float64 = 1)

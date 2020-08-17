@@ -25,6 +25,8 @@
  const LC_rate = 1.0/LC_duration
  const SC_rate = 1.0/SC_duration
 
+ const tess_sector_duration = 27.4 # days
+
 # export num_channels,num_modules,num_quarters,num_cdpp_timescales,mission_data_span,mission_duty_cycle
 # export kepler_exp_time_internal,kepler_read_time_internal,num_exposures_per_LC,num_exposures_per_SC
 # export LC_integration_time,SC_integration_time,LC_read_time,SC_read_time,LC_duration,SC_duration,LC_rate,SC_rate
