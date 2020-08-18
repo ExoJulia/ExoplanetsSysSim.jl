@@ -770,6 +770,13 @@ TESSTargetObs(n::Integer) = TESSTargetObs( fill(TransitPlanetObs(),n), fill(Tran
 num_planets(t::KeplerTargetObs) = length(t.obs)
 num_planets(t::TESSTargetObs) = length(t.obs)
 
+function get_idcol(t::T where {T<:TargetAbstract})
+  if typeof(t) == KeplerTarget
+    return :kepid
+  end
+  return :ticid
+end
+
 """
     calc_target_obs_sky_ave(t, sim_param)
 
@@ -790,6 +797,7 @@ function calc_target_obs_sky_ave(t::T where {T<:TargetAbstract}, sim_param::SimP
    min_detect_prob_to_be_included = 0.0  # get_real(sim_param,"min_detect_prob_to_be_included")
    num_observer_samples = 1 # get_int(sim_param,"num_viewing_geometry_samples")
   vetting_efficiency = get_function(sim_param,"vetting_efficiency")
+  idcol = get_idcol(t)
 
   np = num_planets(t)
   obs = Array{TransitPlanetObs}(undef,np)
@@ -814,15 +822,20 @@ function calc_target_obs_sky_ave(t::T where {T<:TargetAbstract}, sim_param::SimP
         # cdpp_central = interpolate_cdpp_to_duration(t, duration_central)
         # snr_central = calc_snr_if_transit_cdpp(t, depth, duration_central, cdpp_central, sim_param, num_transit=ntr)
         # pdet_ave = calc_ave_prob_detect_if_transit_from_snr_cdpp(t, snr_central, period, duration_central, size_ratio, cdpp_central, sim_param, num_transit=ntr)
-
-        kepid = StellarTable.star_table(t.sys[s].star.id, :kepid)
-        osd_duration_central = get_durations_searched_Kepler(period,duration_central)	#tests if durations are included in Kepler's observations for a certain planet period. If not, returns nearest possible duration
-        osd_central = WindowFunction.interp_OSD_from_table(kepid, period, osd_duration_central)
-        if osd_duration_central > duration_central				#use a correcting factor if this duration is lower than the minimum searched for this period.
-	   osd_central = osd_central*osd_duration_central/duration_central
-	end
-        snr_central = calc_snr_if_transit(t, depth, duration_central, osd_central, sim_param, num_transit=ntr)
-        pdet_ave = calc_ave_prob_detect_if_transit_from_snr(t, snr_central, period, duration_central, size_ratio, osd_central, sim_param, num_transit=ntr)
+        
+        starid = StellarTable.star_table(t.sys[s].star.id, idcol)
+        if idcol == :kepid
+          osd_duration_central = get_durations_searched_Kepler(period,duration_central)	#tests if durations are included in Kepler's observations for a certain planet period. If not, returns nearest possible duration
+          osd_central = WindowFunction.interp_OSD_from_table(kepid, period, osd_duration_central)
+          if osd_duration_central > duration_central				#use a correcting factor if this duration is lower than the minimum searched for this period.
+            osd_central = osd_central*osd_duration_central/duration_central
+          end
+          snr_central = calc_snr_if_transit(t, depth, duration_central, osd_central, sim_param, num_transit=ntr)
+          pdet_ave = calc_ave_prob_detect_if_transit_from_snr(t, snr_central, period, duration_central, size_ratio, osd_central, sim_param, num_transit=ntr)
+        else
+          # the case for TESS
+          pdet_ave = calc_ave_prob_detect_if_transit_from_snr(t, snr_central, period, duration_central, sim_param, num_transit)
+        end
 
 	add_to_catalog = pdet_ave > min_detect_prob_to_be_included  # Include all planets with sufficient detection probability
 

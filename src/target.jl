@@ -7,7 +7,7 @@ abstract type TargetAbstract end
 
 struct TESSTarget <: TargetAbstract 
   sys::Vector{PlanetarySystemAbstract}
-  cdpp::Array{Float64,1} # the CDPP of observations in each sector
+  noise::Array{Float64,1} # the noise of observations in each sector: photometric (+ psf not added yet)
   contam::Float64
   data_span::Float64
   duty_cycle::Float64
@@ -166,7 +166,7 @@ function generate_tess_target_from_table(sim_param::SimParam)
   star = SingleStar(radius,mass,1.0,ld,star_id)     # TODO SCI: Allow for blends, binaries, etc.
   # cdpp_arr = make_cdpp_array_empty(star_id) # Note: Now leaving this field empty out and looking up each time via interpolate_cdpp_to_duration_lookup_cdpp instead of interpolate_cdpp_to_duration_use_target_cdpp
   # snr_arr = zeros(size(star_table(star_id, :sectors)))
-  cdpp_arr = 7.1 * ones(size(star_table(star_id, :cdpp)))
+  noises = map(x->parse(Float64, x), split(star_table(star_id, :noise), ","))
   contam = star_table(star_id, :contam)
   data_span = star_table(star_id, :dataspan)
   duty_cycle = star_table(star_id, :dutycycle)
@@ -174,9 +174,9 @@ function generate_tess_target_from_table(sim_param::SimParam)
   #   wf_id = star_table(star_id,:wf_id)
   #else
   #   wf_id = WindowFunction.get_window_function_id(star_table(star_id,:kepid))
-  #end 
+  #end
   ps = generate_planetary_system(star, sim_param)
-  return TESSTarget([ps],cdpp_arr,contam,data_span,duty_cycle)
+  return TESSTarget([ps],noises,contam,data_span,duty_cycle)
 end
 
 function generate_kepler_target_simple(sim_param::SimParam)

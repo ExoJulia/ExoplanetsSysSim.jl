@@ -81,6 +81,19 @@ end
 #kepler_window_function = kepler_window_function_binomial_model
 kepler_window_function = kepler_window_function_dr25_model
 
+function tess_window_function(t::TESSTarget, period::Float64, duration::Float64, num_transits_to_confirm::Int64 = 2)::Float64
+    # if the window's too short to see one transit
+    if period + duration > tess_sector_duration
+        return num_transits_to_confirm == 1 ? tess_sector_duration / period : 0
+    # if the window's guaranteed to have `num_transits_to_confirm` transits
+    elseif floor((tess_sector_duration - period + duration) / (period + duration)) >= num_transits_to_confirm - 1
+        return 1
+    else
+        # find P of t0 being small enough
+        return (tess_sector_duration - (num_transits_to_confirm - 1) * period) / (period - duration)
+    end
+end
+
 """
     frac_depth_to_tps_depth(frac_depth)
 
@@ -516,9 +529,9 @@ function calc_prob_detect_if_transit(t::KeplerTarget, snr::Float64, period::Floa
   return wf*detection_efficiency_model(snr, num_transit, min_pdet_nonzero=min_pdet_nonzero)
 end
 
-function calc_prob_detect_if_transit(t::TESSTarget, snr::Float64, period::Float64, duration::Float64, sim_param::SimParam, num_transit::Float64 = -1)
-    min_pdet_nonzero = 1.0e-4                                                # TODO OPT: Consider raising threshold to prevent a plethora of planets that are very unlikely to be detected due to using 0.0 or other small value here
-    return detection_efficiency_model(snr, round(Int64, tess_sector_duration / period), min_pdet_nonzero=min_pdet_nonzero)
+function calc_prob_detect_if_transit(t::TESSTarget, snr::Array{Float64,1}, period::Float64, duration::Float64, sim_param::SimParam; num_transit::Float64 = 1)
+    # WARNING: just returns 1, until prob_detect for TESS is properly defined
+    return 1
 end
 
 function calc_prob_detect_if_transit(t::KeplerTarget, depth::Float64, period::Float64, duration::Float64, osd::Float64, sim_param::SimParam; num_transit::Float64 = 1)
@@ -682,12 +695,16 @@ Probability of detecting planet (if it transits) averaged over impact parameter
 function calc_ave_prob_detect_if_transit_from_snr(t::KeplerTarget, snr_central::Float64, period::Float64, duration_central::Float64, size_ratio::Float64, osd_central::Float64, sim_param::SimParam; num_transit::Float64 = 1)
   min_pdet_nonzero = 1.0e-4
   wf = kepler_window_function(t, num_transit, period, duration_central)
-
   detection_efficiency_central = detection_efficiency_model(snr_central, num_transit, min_pdet_nonzero=min_pdet_nonzero)
   if wf*detection_efficiency_central <= min_pdet_nonzero
      return 0.
   end
 
+  function calc_ave_prob_detect_if_transit_from_snr(t::TESSTarget, snr_central::Float64, period::Float64, duration_central::Float64, sim_param::SimParam, num_transit::Float64 = 1)
+    # currently only uses info from one TESS sector at a time
+    wf = tess_window_function(t, num_transit, period, duration_central)
+    detection_efficiency_central = detection_efficiency_model(snr_central, num_transit, min_pdet_nonzero=min_pdet_nonzero)
+  end
   # Breaking integral into two sections [0,1-b_boundary) and [1-b_boundary,1], so need at least 5 points to evaluate integral via trapezoid rule
   num_impact_param_low_b =  7                            # Number of points to evaluate integral over [0,1-b_boundary) via trapezoid rule
   num_impact_param_high_b = 5 # (size_ratio<=0.05) ? 5 : 11  # Number of points to evaluate integral over [1-b_boudnary,1) via trapezoid rule.  If using 2*size_ratio for bondary for small planets, then keep this odd, so one point lands on 1-size_ratio.

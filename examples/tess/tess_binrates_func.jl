@@ -486,9 +486,7 @@ function setup_tic(filename::String; force_reread::Bool = false)
   has_mass = .! (ismissing.(df[!, :mass]) .| ismissing.(df[!, :e_mass]))
   has_radius = .! (ismissing.(df[!, :rad]) .| ismissing.(df[!, :e_rad]))
   has_dens = .! (ismissing.(df[!, :rho]) .| ismissing.(df[!, :e_rho]))
-  # has_cdpp = .! (ismissing.(df[:rrmscdpp01p5]) .| ismissing.(df[:rrmscdpp02p0]) .| ismissing.(df[:rrmscdpp02p5]) .| ismissing.(df[:rrmscdpp03p0]) .| ismissing.(df[:rrmscdpp03p5]) .| ismissing.(df[:rrmscdpp04p5]) .| ismissing.(df[:rrmscdpp05p0]) .| ismissing.(df[:rrmscdpp06p0]) .| ismissing.(df[:rrmscdpp07p5]) .| ismissing.(df[:rrmscdpp09p0]) .| ismissing.(df[:rrmscdpp10p5]) .| ismissing.(df[:rrmscdpp12p0]) .| ismissing.(df[:rrmscdpp12p5]) .| ismissing.(df[:rrmscdpp15p0]))
-  # has_snr = .! (ismissing.(df[!, :snr]))
-  # has_ld = .! (ismissing.(df[:limbdark_coeff1]) .| ismissing.(df[:limbdark_coeff2]) .| ismissing.(df[:limbdark_coeff3]) .| ismissing.(df[:limbdark_coeff4]))
+  has_noise = .! (ismissing(df[!, :noise])) .& [any([parse(Float64, y) > 0.0 for y in split(x, ",")]) for x in df[!, :noise]]
   has_rest = .! (ismissing.(df[!, :dataspan]) .| ismissing.(df[!, :dutycycle])) 
   in_Q1Q12 = []
   obs_gt_5q = []
@@ -500,11 +498,11 @@ function setup_tic(filename::String; force_reread::Bool = false)
       push!(is_FGK, false)
     end
   end
-  is_usable = has_radius .& is_FGK .& has_mass .& has_dens .& has_rest #.& has_snr
+  is_usable = has_radius .& is_FGK .& has_mass .& has_dens .& has_rest .& has_noise
 
   # See options at: https://iopscience.iop.org/article/10.3847/1538-3881/aad050#ajaad050app2
   # note that they list Mass, Lum, Rad with capitals, but in the downloads from MAST they're lowercase mass, lum, rad.
-  symbols_to_keep = [ :ID, :mass, :e_mass, :rad, :e_rad, :rho, :e_rho, :contratio, :dataspan, :dutycycle, :snr ]
+  symbols_to_keep = [ :ID, :mass, :e_mass, :rad, :e_rad, :rho, :e_rho, :sectors, :contratio, :dataspan, :dutycycle, :noise ]
   # until I can put in actual TIC limb-darkening coefficients, am setting all of them to zero.
   select!(df, symbols_to_keep)    # delete columns that we won't be using anyway
   rename!(df, ["contratio" => "contam", "rad" => "radius"]) # change TESS convention to Kepler
@@ -831,9 +829,7 @@ function cnt_np_bin(cat_obs::TESSObsCatalog, param::SimParam, verbose::Bool = tr
                 for star_id in 1:num_targ
                   ld = ExoplanetsSysSim.LimbDarkeningParam4thOrder(ExoplanetsSysSim.StellarTable.star_table(star_id,:limbdark_coeff1), ExoplanetsSysSim.StellarTable.star_table(star_id,:limbdark_coeff2), ExoplanetsSysSim.StellarTable.star_table(star_id,:limbdark_coeff3), ExoplanetsSysSim.StellarTable.star_table(star_id,:limbdark_coeff4) )
                   star = SingleStar(ExoplanetsSysSim.StellarTable.star_table(star_id,:radius),ExoplanetsSysSim.StellarTable.star_table(star_id,:mass),1.0, ld, star_id)
-                  # cdpp_arr = ExoplanetsSysSim.make_cdpp_array_empty(star_id)#(1.0e-6*sqrt(1.0 / 24.0 / ExoplanetsSysSim.LC_duration)) .* [ExoplanetsSysSim.StellarTable.star_table(star_id, :rrmscdpp01p5)*sqrt(1.5), ExoplanetsSysSim.StellarTable.star_table(star_id, :rrmscdpp02p0)*sqrt(2.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp02p5)*sqrt(2.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp03p0)*sqrt(3.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp03p5)*sqrt(3.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp04p5)*sqrt(4.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp05p0)*sqrt(5.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp06p0)*sqrt(6.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp07p5)*sqrt(7.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp09p0)*sqrt(9.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp10p5)*sqrt(10.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp12p0)*sqrt(12.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp12p5)*sqrt(12.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp15p0)*sqrt(15.)]
-                  cdpp = [ExoplanetsSysSim.StellarTable.star_table(star_id, :cdpp)]
-                  #cdpp = 1.0e-6 * ExoplanetsSysSim.StellarTable.star_table(star_id, :rrmscdpp04p5) * sqrt(4.5/24.0 / ExoplanetsSysSim.LC_duration )
+                  noise = [ExoplanetsSysSim.StellarTable.star_table(star_id, :noise)]
                   contam = 0.0
                   data_span = ExoplanetsSysSim.StellarTable.star_table(star_id, :dataspan)
                   duty_cycle = ExoplanetsSysSim.StellarTable.star_table(star_id, :dutycycle)
@@ -847,7 +843,7 @@ function cnt_np_bin(cat_obs::TESSObsCatalog, param::SimParam, verbose::Bool = tr
                   #else
                   #    wf_id = ExoplanetsSysSim.WindowFunction.get_window_function_id(ExoplanetsSysSim.StellarTable.star_table(star_id,:ID))
                   #end # if star_table_has_key
-                  tess_targ = TESSTarget([PlanetarySystem(star, pl_arr, orbit_arr)], cdpp, contam, data_span, duty_cycle)
+                  tess_targ = TESSTarget([PlanetarySystem(star, pl_arr, orbit_arr)], noise, contam, data_span, duty_cycle)
                       
                   duration = ExoplanetsSysSim.calc_transit_duration(tess_targ,1,1) 
                   if duration <= 0.
@@ -857,7 +853,7 @@ function cnt_np_bin(cat_obs::TESSObsCatalog, param::SimParam, verbose::Bool = tr
                   ntr = ExoplanetsSysSim.calc_expected_num_transits(tess_targ, 1, 1, param)
                   depth = ExoplanetsSysSim.calc_transit_depth(tess_targ,1,1)
                   # dinosaur
-                  pdet += ExoplanetsSysSim.calc_prob_detect_if_transit(tess_targ, snr, pper, duration, param, num_transit=ntr)
+                  pdet += ExoplanetsSysSim.calc_prob_detect_if_transit(tess_targ, noise, pper, duration, param, num_transit=ntr)
                 end # for
                 np_bin[(pbin-1)*(length(limitRp)-1) + rbin] += 1.0/pgeo/(pdet/num_targ)
                 if verbose
@@ -890,9 +886,8 @@ function stellar_ess(param::SimParam, verbose::Bool = true)
   for star_id in 1:num_targ
     ld = ExoplanetsSysSim.LimbDarkeningParam4thOrder(ExoplanetsSysSim.StellarTable.star_table(star_id,:limbdark_coeff1), ExoplanetsSysSim.StellarTable.star_table(star_id,:limbdark_coeff2), ExoplanetsSysSim.StellarTable.star_table(star_id,:limbdark_coeff3), ExoplanetsSysSim.StellarTable.star_table(star_id,:limbdark_coeff4) )
     star = SingleStar(ExoplanetsSysSim.StellarTable.star_table(star_id,:radius),ExoplanetsSysSim.StellarTable.star_table(star_id,:mass),1.0, ld, star_id)
-    #cdpp_arr = ExoplanetsSysSim.make_cdpp_array_empty(star_id)#(1.0e-6*sqrt(1.0/24.0/ExoplanetsSysSim.LC_duration)) .* [ExoplanetsSysSim.StellarTable.star_table(star_id, :rrmscdpp01p5)*sqrt(1.5), ExoplanetsSysSim.StellarTable.star_table(star_id, :rrmscdpp02p0)*sqrt(2.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp02p5)*sqrt(2.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp03p0)*sqrt(3.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp03p5)*sqrt(3.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp04p5)*sqrt(4.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp05p0)*sqrt(5.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp06p0)*sqrt(6.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp07p5)*sqrt(7.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp09p0)*sqrt(9.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp10p5)*sqrt(10.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp12p0)*sqrt(12.), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp12p5)*sqrt(12.5), ExoplanetsSysSim.StellarTable.star_table(star_id,:rrmscdpp15p0)*sqrt(15.)]
     contam = 0.0
-    snr = ExoplanetsSysSim.StellarTable.star_table(star_id, :snr)
+    noise = ExoplanetsSysSim.StellarTable.star_table(star_id, :noise)
     data_span = ExoplanetsSysSim.StellarTable.star_table(star_id, :dataspan)
     duty_cycle = ExoplanetsSysSim.StellarTable.star_table(star_id, :dutycycle)
     #if ExoplanetsSysSim.StellarTable.star_table_has_key(:wf_id)
@@ -916,7 +911,7 @@ function stellar_ess(param::SimParam, verbose::Bool = true)
     incl = acos(min(1, Base.rand()*star.radius*ExoplanetsSysSim.rsol_in_au/ExoplanetsSysSim.semimajor_axis(pper, star.mass)))
 	  orbit_arr[1] = Orbit(pper, 0., incl, 0., 0., Base.rand()*2.0*pi)
 	  pl_arr[1] = Planet(prad, 1.0e-6)
-	  tess_targ = TESSTarget([PlanetarySystem(star, pl_arr, orbit_arr)], [snr],contam,data_span,duty_cycle)
+	  tess_targ = TESSTarget([PlanetarySystem(star, pl_arr, orbit_arr)], [noise],contam,data_span,duty_cycle)
 
 	  duration = ExoplanetsSysSim.calc_transit_duration(tess_targ,1,1)
 	  if duration <= 0.

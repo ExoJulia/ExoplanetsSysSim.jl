@@ -247,7 +247,7 @@ function setup_actual_pc_catalog_tess(df_star::DataFrame, df_toi::DataFrame, usa
     output = TESSObsCatalog()
     sort!(df_star, (:ID))
     # df_obs = join(df_star, df_toi, on = :ID => :TIC)
-    df_obs = innerjoin(select(df_star, Not(:snr)), df_toi, on=:ID => :TIC, makeunique=false, validate=(false, false))
+    df_obs = innerjoin(select(df_star, Not(:sectors)), df_toi, on=:ID => :TIC, makeunique=false, validate=(false, false))
 
     df_obs = sort!(df_obs, (:ID))
 

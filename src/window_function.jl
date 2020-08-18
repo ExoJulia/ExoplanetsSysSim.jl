@@ -18,7 +18,7 @@ using ExoplanetsSysSim.SimulationParameters
 
 # Object to hold window function data
 struct window_function_data
-  window_func_array::Array{Float64,3}      # Value of window function (window_function_id, duration_id, period_id).  Maybe rename to wf_value or data?
+  window_func_array::Array{Float64,3}      #  Value of window function (window_function_id, duration_id, period_id).  Maybe rename to wf_value or data?
   wf_durations_in_hrs::Array{Float64,1}    # Boundaries for duration bins in window_func_array.  Maybe rename to durations?
   wf_periods_in_days::Array{Float64,1}     # Boundaries for periods bins in window_func_array.  Maybe rename to periods?
   sorted_quarter_strings::Array{Int64,1}   # TODO OPT: Is there a reason to keep this?  Maybe rename to quarter_strings?
