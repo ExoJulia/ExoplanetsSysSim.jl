@@ -502,7 +502,7 @@ function setup_tic(filename::String; force_reread::Bool = false)
 
   # See options at: https://iopscience.iop.org/article/10.3847/1538-3881/aad050#ajaad050app2
   # note that they list Mass, Lum, Rad with capitals, but in the downloads from MAST they're lowercase mass, lum, rad.
-  symbols_to_keep = [ :ID, :mass, :e_mass, :rad, :e_rad, :rho, :e_rho, :sectors, :contratio, :dataspan, :dutycycle, :noise ]
+  symbols_to_keep = [ :ticid, :mass, :e_mass, :rad, :e_rad, :rho, :e_rho, :sectors, :contratio, :dataspan, :dutycycle, :noise ]
   # until I can put in actual TIC limb-darkening coefficients, am setting all of them to zero.
   select!(df, symbols_to_keep)    # delete columns that we won't be using anyway
   rename!(df, ["contratio" => "contam", "rad" => "radius"]) # change TESS convention to Kepler
@@ -838,11 +838,7 @@ function cnt_np_bin(cat_obs::TESSObsCatalog, param::SimParam, verbose::Bool = tr
                   incl = acos(min(1, Base.rand()*star.radius*ExoplanetsSysSim.rsol_in_au/ExoplanetsSysSim.semimajor_axis(pper, star.mass)))
                   orbit_arr[1] = Orbit(pper, 0., incl, 0., 0., Base.rand()*2.0*pi)
                   pl_arr[1] = Planet(prad, 1.0e-6)
-                  #if ExoplanetsSysSim.StellarTable.star_table_has_key(:wf_id)
-                  #    wf_id = ExoplanetsSysSim.StellarTable.star_table(star_id,:wf_id)
-                  #else
-                  #    wf_id = ExoplanetsSysSim.WindowFunction.get_window_function_id(ExoplanetsSysSim.StellarTable.star_table(star_id,:ID))
-                  #end # if star_table_has_key
+
                   tess_targ = TESSTarget([PlanetarySystem(star, pl_arr, orbit_arr)], noise, contam, data_span, duty_cycle)
                       
                   duration = ExoplanetsSysSim.calc_transit_duration(tess_targ,1,1) 

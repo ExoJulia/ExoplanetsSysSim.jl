@@ -834,7 +834,10 @@ function calc_target_obs_sky_ave(t::T where {T<:TargetAbstract}, sim_param::SimP
           pdet_ave = calc_ave_prob_detect_if_transit_from_snr(t, snr_central, period, duration_central, size_ratio, osd_central, sim_param, num_transit=ntr)
         else
           # the case for TESS
-          pdet_ave = calc_ave_prob_detect_if_transit_from_snr(t, snr_central, period, duration_central, sim_param, num_transit)
+          # currently only uses noise from the first sector of observations: should update such that every star entry knows what sector it's from and can look up accordingly
+          # but till the psf interpolation is done, the results should be the same
+          snr_central = calc_snr_if_transit_cdpp(t, depth, duration_central, t.noise[1], sim_param, num_transit=ntr)
+          pdet_ave = calc_ave_prob_detect_if_transit_from_snr(t, snr_central, period, duration_central, sim_param, num_transit=ntr)
         end
 
 	add_to_catalog = pdet_ave > min_detect_prob_to_be_included  # Include all planets with sufficient detection probability
@@ -1144,8 +1147,8 @@ function transit_noise_model_price_rogers(t::T where {T<:TargetAbstract}, s::Int
     end
 
 	Ttot = period
-	I = LC_integration_time      # WARNING: Assumes LC only
-	Lambda_eff = LC_rate * num_tr # calc_expected_num_transits(t, s, p, sim_param)
+	I = kepler_LC_integration_time      # WARNING: Assumes LC only
+	Lambda_eff = kepler_LC_rate * num_tr # calc_expected_num_transits(t, s, p, sim_param)
 	sigma = interpolate_cdpp_to_duration(t, duration)
 
 	# Price & Rogers Eqn A8 & Table 1 # Thanks to Danley for finding typeos.

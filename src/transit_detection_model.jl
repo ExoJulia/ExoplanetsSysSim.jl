@@ -391,7 +391,7 @@ Estimated CDPP at given transit duration for Kepler target.
 function interpolate_cdpp_to_duration_lookup_cdpp(t::KeplerTarget, duration::Float64)::Float64
    duration_in_hours = duration *24.0
    dur_idx = searchsortedlast(cdpp_durations,duration_in_hours)   # cdpp_durations is defined in constants.jl
-   get_cdpp(i::Integer) = 1.0e-6*sqrt(cdpp_durations[i]/24.0/LC_duration)*star_table(t,duration_symbols[i])
+   get_cdpp(i::Integer) = 1.0e-6*sqrt(cdpp_durations[i]/24.0/kepler_LC_duration)*star_table(t,duration_symbols[i])
 
    if dur_idx <= 0
       cdpp = get_cdpp(1)
@@ -425,9 +425,15 @@ Calculate the expected multiple event statistic (signal-to-noise ratio) for plan
 """
 function calc_snr_if_transit_cdpp(t::KeplerTarget, depth::Float64, duration::Float64, cdpp::Float64, sim_param::SimParam; num_transit::Float64 = 1)
   # depth_tps = frac_depth_to_tps_depth(depth)                  # TODO SCI:  WARNING: Hardcoded this conversion.  Remove once depth calculated using limb darkening model
-  # snr = depth_tps*sqrt(num_transit*duration*LC_rate)/cdpp     # WARNING: Assumes measurement uncertainties are uncorrelated & CDPP based on LC
-  snr = depth*sqrt(num_transit*duration*LC_rate)/cdpp     # WARNING: Assumes measurement uncertainties are uncorrelated & CDPP based on LC
+  # snr = depth_tps*sqrt(num_transit*duration*kepler_LC_rate)/cdpp     # WARNING: Assumes measurement uncertainties are uncorrelated & CDPP based on LC
+  snr = depth*sqrt(num_transit*duration*kepler_LC_rate)/cdpp     # WARNING: Assumes measurement uncertainties are uncorrelated & CDPP based on LC
 end
+
+function calc_snr_if_transit_cdpp(t::TESSTarget, depth::Float64, duration::Float64, noise::Float64, sim_param::SimParam; num_transit::Float64 = 1)
+    # depth_tps = frac_depth_to_tps_depth(depth)                  # TODO SCI:  WARNING: Hardcoded this conversion.  Remove once depth calculated using limb darkening model
+    # snr = depth_tps*sqrt(num_transit*duration*kepler_LC_rate)/cdpp     # WARNING: Assumes measurement uncertainties are uncorrelated & CDPP based on LC
+    snr = depth*sqrt(num_transit*duration*tess_LC_rate)/noise     # WARNING: Assumes measurement uncertainties are uncorrelated & CDPP based on LC
+  end
 
 """
     calc_snr_if_transit(t, depth, duration, osd, sim_param; num_transit = 1)

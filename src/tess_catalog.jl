@@ -223,6 +223,7 @@ function read_toi_catalog(filename::String, force_reread::Bool = false)
             error(string("# Failed to read toi catalog >",filename,"< in ascii format."))
         end
     end
+    df[!,:toi_prad] *= (earth_radius_eq_in_m_IAU2015 / sun_radius_in_m_IAU2015)
     return df, usable
 end
 
@@ -245,11 +246,10 @@ function setup_actual_pc_catalog_tess(df_star::DataFrame, df_toi::DataFrame, usa
     local target_obs, num_pl
     df_toi = df_toi[usable_toi,:]
     output = TESSObsCatalog()
-    sort!(df_star, (:ID))
-    # df_obs = join(df_star, df_toi, on = :ID => :TIC)
-    df_obs = innerjoin(select(df_star, Not(:sectors)), df_toi, on=:ID => :TIC, makeunique=false, validate=(false, false))
+    sort!(df_star, (:ticid))
+    df_obs = innerjoin(select(df_star, Not(:sectors)), df_toi, on=:ticid => :TIC, makeunique=false, validate=(false, false))
 
-    df_obs = sort!(df_obs, (:ID))
+    df_obs = sort!(df_obs, (:ticid))
 
     # if haskey(sim_param, "toi_subset_csv")
     #     tot_plan -= length(df_obs[!,:kepoi_name])
@@ -261,15 +261,15 @@ function setup_actual_pc_catalog_tess(df_star::DataFrame, df_toi::DataFrame, usa
     for i in 1:length(df_obs[!,:toi_id])
         if plid == 0
             plid = 1
-            while i+plid < length(df_obs[!,:toi_id]) && df_obs[i+plid,:ID] == df_obs[i,:ID]
+            while i+plid < length(df_obs[!,:toi_id]) && df_obs[i+plid,:ticid] == df_obs[i,:ticid]
                 plid += 1
             end
             num_pl = plid
             target_obs = TESSTargetObs(num_pl)
-            star_idx = searchsortedfirst(df_star[!,:ID],df_obs[i,:ID])
-            if star_idx > length(df_star[!,:ID])
-                @warn "# Couldn't find TIC " * df_star[i,:ID] * " in df_obs."
-                star_idx = rand(1:length(df_star[!,:ID]))
+            star_idx = searchsortedfirst(df_star[!,:ticid],df_obs[i,:ticid])
+            if star_idx > length(df_star[!,:ticid])
+                @warn "# Couldn't find TIC " * df_star[i,:ticid] * " in df_obs."
+                star_idx = rand(1:length(df_star[!,:ticid]))
             end
             target_obs.star = ExoplanetsSysSim.StarObs(df_obs[i,:toi_prad],df_obs[i,:mass],star_idx)
 

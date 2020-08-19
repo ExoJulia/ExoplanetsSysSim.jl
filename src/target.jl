@@ -47,7 +47,7 @@ end
 
 function make_cdpp_array(star_id::Integer)
   star_table(id::Integer,sym::Symbol) = StellarTable.star_table(id,sym)::Float64
-  cdpp_arr = (1.0e-6*sqrt(1.0/24.0/LC_duration)) .* Float64[star_table(star_id, :rrmscdpp01p5)*sqrt(1.5), star_table(star_id, :rrmscdpp02p0)*sqrt(2.), star_table(star_id,:rrmscdpp02p5)*sqrt(2.5), star_table(star_id,:rrmscdpp03p0)*sqrt(3.), star_table(star_id,:rrmscdpp03p5)*sqrt(3.5), star_table(star_id,:rrmscdpp04p5)*sqrt(4.5), star_table(star_id,:rrmscdpp05p0)*sqrt(5.), star_table(star_id,:rrmscdpp06p0)*sqrt(6.), star_table(star_id,:rrmscdpp07p5)*sqrt(7.5), star_table(star_id,:rrmscdpp09p0)*sqrt(9.), star_table(star_id,:rrmscdpp10p5)*sqrt(10.5), star_table(star_id,:rrmscdpp12p0)*sqrt(12.), star_table(star_id,:rrmscdpp12p5)*sqrt(12.5), star_table(star_id,:rrmscdpp15p0)*sqrt(15.)]
+  cdpp_arr = (1.0e-6*sqrt(1.0/24.0/kepler_LC_duration)) .* Float64[star_table(star_id, :rrmscdpp01p5)*sqrt(1.5), star_table(star_id, :rrmscdpp02p0)*sqrt(2.), star_table(star_id,:rrmscdpp02p5)*sqrt(2.5), star_table(star_id,:rrmscdpp03p0)*sqrt(3.), star_table(star_id,:rrmscdpp03p5)*sqrt(3.5), star_table(star_id,:rrmscdpp04p5)*sqrt(4.5), star_table(star_id,:rrmscdpp05p0)*sqrt(5.), star_table(star_id,:rrmscdpp06p0)*sqrt(6.), star_table(star_id,:rrmscdpp07p5)*sqrt(7.5), star_table(star_id,:rrmscdpp09p0)*sqrt(9.), star_table(star_id,:rrmscdpp10p5)*sqrt(10.5), star_table(star_id,:rrmscdpp12p0)*sqrt(12.), star_table(star_id,:rrmscdpp12p5)*sqrt(12.5), star_table(star_id,:rrmscdpp15p0)*sqrt(15.)]
 end
 
 function generate_kepler_target_from_table(sim_param::SimParam)
@@ -187,7 +187,7 @@ function generate_kepler_target_simple(sim_param::SimParam)
    mean_log_cdpp = 4.9759601617565465   # mean frmo star table
    stddev_log_cdpp = 0.6704860437536709 # std dev from star table
   rrmscdpp_5hr = exp(mean_log_cdpp+stddev_log_cdpp*randn())
-  cdpp_5hr = 1.0e-6 * rrmscdpp_5hr * sqrt(5.0/24.0 / LC_duration )
+  cdpp_5hr = 1.0e-6 * rrmscdpp_5hr * sqrt(5.0/24.0 / kepler_LC_duration )
   contam = 0.0 # rand(LogNormal(1.0e-3,1.0))   # TODO SCI: Come up with better description of Kepler targets, maybe draw from real contaminations
   wf_id = 0
   # ch = rand(DiscreteUniform(1,84))              # Removed channel in favor of window function id
