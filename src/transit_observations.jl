@@ -837,7 +837,7 @@ function calc_target_obs_sky_ave(t::T where {T<:TargetAbstract}, sim_param::SimP
           # currently only uses noise from the first sector of observations: should update such that every star entry knows what sector it's from and can look up accordingly
           # but till the psf interpolation is done, the results should be the same
           snr_central = calc_snr_if_transit_cdpp(t, depth, duration_central, t.noise[1], sim_param, num_transit=ntr)
-          pdet_ave = calc_ave_prob_detect_if_transit_from_snr(t, snr_central, period, duration_central, sim_param, num_transit=ntr)
+          pdet_ave = calc_ave_prob_detect_if_transit_from_snr(t, snr_central, period, duration_central, sim_param, ntr)
         end
 
 	add_to_catalog = pdet_ave > min_detect_prob_to_be_included  # Include all planets with sufficient detection probability
@@ -899,7 +899,11 @@ function calc_target_obs_sky_ave(t::T where {T<:TargetAbstract}, sim_param::SimP
   has_no_sc = falses(has_sc_bit_array_size)
   star_obs = StarObs( t.sys[1].star.radius, t.sys[1].star.mass, t.sys[1].star.id )  # NOTE:  This sets the observed star properties to be those in the stellar catalog.  If want to incorporate uncertainty in stellar properties, that would be done elsewhere when translating depths into planet radii.
   #return KeplerTargetObs(obs, sigma, id, sdp_target, has_no_sc, star_obs )
-  return KeplerTargetObs(obs, sigma, sdp_target, has_no_sc, star_obs )
+  if idcol == :kepid
+    return KeplerTargetObs(obs, sigma, sdp_target, has_no_sc, star_obs )
+  else
+    return TESSTargetObs(obs, sigma, sdp_target, has_no_sc, star_obs )
+  end
 end
 
 """
