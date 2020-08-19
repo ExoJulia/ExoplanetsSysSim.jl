@@ -826,7 +826,7 @@ function calc_target_obs_sky_ave(t::T where {T<:TargetAbstract}, sim_param::SimP
         starid = StellarTable.star_table(t.sys[s].star.id, idcol)
         if idcol == :kepid
           osd_duration_central = get_durations_searched_Kepler(period,duration_central)	#tests if durations are included in Kepler's observations for a certain planet period. If not, returns nearest possible duration
-          osd_central = WindowFunction.interp_OSD_from_table(kepid, period, osd_duration_central)
+          osd_central = WindowFunction.interp_OSD_from_table(starid, period, osd_duration_central)
           if osd_duration_central > duration_central				#use a correcting factor if this duration is lower than the minimum searched for this period.
             osd_central = osd_central*osd_duration_central/duration_central
           end
@@ -859,7 +859,7 @@ function calc_target_obs_sky_ave(t::T where {T<:TargetAbstract}, sim_param::SimP
               # snr = snr_central * (cdpp_central/cdpp) * sqrt(transit_duration_factor)
 
               osd_duration = get_durations_searched_Kepler(period,duration)	#tests if durations are included in Kepler's observations for a certain planet period. If not, returns nearest possible duration
-              osd = WindowFunction.interp_OSD_from_table(kepid, period, osd_duration)
+              osd = WindowFunction.interp_OSD_from_table(starid, period, osd_duration)
               if osd_duration > duration				#use a correcting factor if this duration is lower than the minimum searched for this period.
 	          osd = osd*osd_duration/duration
 	      end
