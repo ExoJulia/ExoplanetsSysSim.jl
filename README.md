@@ -96,12 +96,13 @@ using ExoplanetsSysSim
 * Cite relevant code and associated publications
   - [![DOI](https://zenodo.org/badge/179777476.svg)](https://zenodo.org/badge/latestdoi/179777476) Citation for core SysSim code base.
   - [Hsu et al. (2018) *AJ* 155, 205.](https://arxiv.org/ct?url=https%3A%2F%2Fdx.doi.org%2F10.3847%2F1538-3881%2Faab9a8&v=19ae32f8): 
-  First published paper, describes basic SysSim functionality pre-1.0 version, please cite until Hsu et al. 2019 is accepted.
-  - [Hsu et al. (2019) *AJ* 158, 3.](https://doi.org/10.3847/1538-3881/ab31ab)  "Occurrence Rates of Planets Orbiting FGK Stars: Combining Kepler DR25, Gaia DR2, and Bayesian Inference": 
-  Describes improvements to model for Kepler pipeline in SysSim v1.0, please cite if using SysSim v1.
-  - [He, Ford, & Ragozzine (2019) *MNRAS* 490, 4575-4605](https://doi.org/10.1093/mnras/stz2869) "Architectures of exoplanetary systems – I. A clustered forward model for exoplanetary systems around Kepler’s FGK stars":  
- Describes model for generating planetary systems, uses SysSim v1.0, please cite if using clustered model.
-  - [He, Ford, & Ragozzine (2020) submitted to *MNRAS*. arXiv:2003.04348](https://arxiv.org/abs/2003.04348) "Architectures of Exoplanetary Systems. II: An Intrinsic Relation between Planetary System Occurrence and Spectral Type for Kepler's FGK Dwarfs":
+  First published paper, describes basic SysSim functionality pre-1.0 version and includes validation of methods.  
+  - [Hsu et al. (2019) *AJ* 158, 3.](https://doi.org/10.3847/1538-3881/ab31ab)  "Occurrence Rates of Planets Orbiting FGK Stars: Combining Kepler DR25, Gaia DR2, and Bayesian Inference":  Describes improvements to model for Kepler pipeline in SysSim v1.0, please cite if using SysSim v1.* or results for occurence rates for FGK stars.
+  - [Hsu, Ford & Terrien. (2020) *submitted to MNRAS* ](https://arxiv.org/abs/2002.02573) " Eric B. Ford, Ryan Terrien "Occurrence Rates of Planets Orbiting M Stars: Applying ABC to Kepler DR25, Gaia DR2, and 2MASS Data":  Describes tweaks for M stars.  Please cite for occurence rates for M (and late K) stars. 
+  - [He, Ford, & Ragozzine (2019) *MNRAS* 490, 4575-4605](https://doi.org/10.1093/mnras/stz2869) "Architectures of exoplanetary systems – I. A clustered forward model for exoplanetary systems around Kepler’s FGK stars":  Describes model for generating planetary systems, uses SysSim v1.0.  Please cite if using clustered model with two populations with different inclination distributions.
+  - [He, Ford, & Ragozzine (2020) submitted to *AAS Journals*. arXiv:2003.04348](https://arxiv.org/abs/2003.04348) "Architectures of Exoplanetary Systems. II: An Intrinsic Relation between Planetary System Occurrence and Spectral Type for Kepler's FGK Dwarfs":  Describes model for dependence on stellar properties.  Please cite if using results for how occurence reates or architectures depend on stellar properties.  
+  - [He, Ford, Carrera & Ragozzine (2020) submitted to *AAS Journals*. arXiv:2007.14473](https://arxiv.org/abs/2007.14473) "Architectures of Exoplanetary Systems: Eccentricity and Mutual Inclination Distributions of AMD-Stable Planetary Systems":  Describes model for generating planetary systems uses SysSim v1.1.  Please cite if using clustered model with one  populations with with a broader eccentricity and mutual inclination distributions based on AMD stability.  
+  
   Most recent public paper, describing the fraction of stars with planets as a function of spectral type, uses SysSim v1.0, please cite if using clustered model with stellar dependence)
   - [Brakensiek & Ragozzine (2016) ApJ 821, 47.](https://doi.org/10.3847/0004-637X/821/1/47) 
   Citation for CORBITS, please cite if you make use of averaging over viewing geometries.
