@@ -28,7 +28,7 @@ include("constants.jl")
 #require(joinpath(Pkg.dir("ExoplanetsSysSim"), "src", "constants.jl"))
 export SimParam
 export SimulationParameters
-export add_param_fixed, add_param_active, set_active, set_inactive, is_active, update_param, get, get_real, get_int, get_function, get_any, haskey, make_vector_of_sim_param, update_sim_param_from_vector!, make_vector_of_active_param_keys, get_range_for_sim_param
+export add_param_fixed, add_param_active, set_active, set_inactive, is_active, update_param, get, get_real, get_int, get_bool, get_function, get_any, haskey, make_vector_of_sim_param, update_sim_param_from_vector!, make_vector_of_active_param_keys, get_range_for_sim_param
 export setup_sim_param_demo
 include("simulation_parameters.jl")
 using ExoplanetsSysSim.SimulationParameters

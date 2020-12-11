@@ -169,7 +169,7 @@ function get_int(sim::SimParam, key::String)
 end
 
 function get_bool(sim::SimParam, key::String)
-  val::bool = get(sim.param,key,false)
+  val::Bool = get(sim.param,key,false)
   return val
 end
 
