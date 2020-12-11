@@ -292,7 +292,7 @@ function generate_num_planets_binrates_uniform(s::Star, sim_param::SimParam)
   return min(sum_lambda, max_tranets_in_sys)
 end
 
-function generate_num_planets_binrates_beta(s::Star, sim_param::SimParam)
+function generate_num_planets_binrates_dirichlet(s::Star, sim_param::SimParam)
   local max_tranets_in_sys::Int64 = get_int(sim_param,"max_tranets_in_sys") # TODO SCI: Is 7 planets max per system OK, even when fitting across potentially 9 period bins?
   #local max_tranets_per_P::Int64 = 3  # Set maximum number of planets per period range as loose stability criteria and to prevent near-crossing orbits
   rate_tab::Array{Float64,2} = get_any(sim_param, "obs_par", Array{Float64,2})
