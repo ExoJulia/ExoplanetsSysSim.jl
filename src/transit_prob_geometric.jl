@@ -35,7 +35,7 @@ function does_planet_transit(ps::PlanetarySystem{StarT}, pl::Integer) where {Sta
    incl::Float64 = ps.orbit[pl].incl
    a::Float64 = semimajor_axis(ps,pl)
    Rstar::Float64 = rsol_in_au*ps.star.radius
-   if (Rstar >= (a*(1-ecc)*(1+ecc))/(1+ecc*sin(ps.orbit[pl].omega))*cos(incl))
+   if (Rstar >= (a*(1-ecc)*(1+ecc)*abs(cos(incl)))/(1+ecc*sin(ps.orbit[pl].omega)))
      return true
    else
      return false
