@@ -99,10 +99,12 @@ using ExoplanetsSysSim
   First published paper, describes basic SysSim functionality pre-1.0 version, please cite until Hsu et al. 2019 is accepted.
   - [Hsu et al. (2019) *AJ* 158, 3.](https://doi.org/10.3847/1538-3881/ab31ab)  "Occurrence Rates of Planets Orbiting FGK Stars: Combining Kepler DR25, Gaia DR2, and Bayesian Inference": 
   Describes improvements to model for Kepler pipeline in SysSim v1.0, please cite if using SysSim v1.
-  - [He, Ford, & Ragozzine (2019) *MNRAS* 490, 4575-4605](https://doi.org/10.1093/mnras/stz2869) "Architectures of exoplanetary systems – I. A clustered forward model for exoplanetary systems around Kepler’s FGK stars":  
+  - [He, Ford, & Ragozzine (2019) *MNRAS* 490, 4575-4605](https://doi.org/10.1093/mnras/stz2869) "Architectures of Exoplanetary Systems. I: A Clustered Forward Model for Exoplanetary Systems Around Kepler’s FGK Stars":  
  Describes model for generating planetary systems, uses SysSim v1.0, please cite if using clustered model.
-  - [He, Ford, & Ragozzine (2020) submitted to *MNRAS*. arXiv:2003.04348](https://arxiv.org/abs/2003.04348) "Architectures of Exoplanetary Systems. II: An Intrinsic Relation between Planetary System Occurrence and Spectral Type for Kepler's FGK Dwarfs":
-  Most recent public paper, describing the fraction of stars with planets as a function of spectral type, uses SysSim v1.0, please cite if using clustered model with stellar dependence)
+  - [He, Ford, & Ragozzine (2020a) *AJ* 161, 16 (24pp).](https://iopscience.iop.org/article/10.3847/1538-3881/abc68b) "Architectures of Exoplanetary Systems. II: An Increase in Inner Planetary System Occurrence Toward Later Spectral Types for Kepler's FGK Dwarfs":
+  Describes model for the fraction of stars with planets as a function of spectral type, uses SysSim v1.0, please cite if using clustered model with stellar dependence.
+  - [He et al. (2020b) *AJ* 160, 276 (38pp).](https://iopscience.iop.org/article/10.3847/1538-3881/abba18) "Architectures of Exoplanetary Systems. III: Eccentricity and Mutual Inclination Distributions of AMD-stable Planetary Systems":
+  Describes clustered AMD model, uses SysSim v1.0, please cite if using AMD models.
   - [Brakensiek & Ragozzine (2016) ApJ 821, 47.](https://doi.org/10.3847/0004-637X/821/1/47) 
   Citation for CORBITS, please cite if you make use of averaging over viewing geometries.
 
