@@ -54,7 +54,7 @@ function is_valid_mfgk_ratio(param_vector::Vector{Float64})
     global sim_param_closure
     update_sim_param_from_vector!(param_vector,sim_param_closure)
     limitP::Array{Float64,1} = get_any(sim_param_closure, "p_lim_arr", Array{Float64,1})
-    const rate_tab::Array{Float64,2} = get_any(sim_param_closure, "obs_par", Array{Float64,2})[:,1:length(limitP)]
+    rate_tab::Array{Float64,2} = get_any(sim_param_closure, "obs_par", Array{Float64,2})[:,1:length(limitP)]
     const mfgk_ratio::Float64 = get_real(sim_param, "mfgk_ratio") 
     #const lambda = sum(rate_tab)
     if any(x -> x < 0., rate_tab) || any([floor(3*log(limitP[i+1]/limitP[i])/log(2)) for i in 1:length(limitP)-1] .< mfgk_ratio*sum(rate_tab, dims=1)')
