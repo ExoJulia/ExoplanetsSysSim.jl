@@ -121,7 +121,7 @@ function setup(prior_choice::String, bin_size_factor::Float64)
     println("# Finished reading in KOI data")  
     df_star = setup_star_table_dr25(sim_param_closure)
     println("# Finished reading in stellar data")
-    cat_obs = setup_actual_planet_candidate_catalog(df_star, df_koi, usable_koi, sim_param_closure)
+    cat_obs = setup_actual_pc_catalog_kepler(df_star, df_koi, usable_koi, sim_param_closure)
     println("# Finished setting up true catalog")
     ###
     

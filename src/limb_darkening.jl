@@ -89,7 +89,8 @@ end
 function depth_at_midpoint(radius_ratio::Float64, ld::LimbDarkeningParam4thOrder)
     c0 = 1-sum(ld.coeff)  
     omega = c0/4+sum(ld.coeff./(5:8))
-    ksq = 1-radius_ratio^2
+    ksq = max(0.0, 1-radius_ratio^2)
+    # likely false positive? not sure why this is happening
     tmp0 = c0/4*ksq
     tmp1 = ld.coeff[1]/5*ksq^(5//4)
     tmp2 = ld.coeff[2]/6*ksq^(3//2)

@@ -81,6 +81,19 @@ end
 #kepler_window_function = kepler_window_function_binomial_model
 kepler_window_function = kepler_window_function_dr25_model
 
+function tess_window_function(t::TESSTarget, period::Float64, duration::Float64, num_transits_to_confirm::Float64 = 2.0)::Float64
+    # if the window's too short to see one transit
+    if period + duration > tess_sector_duration
+        return num_transits_to_confirm == 1 ? tess_sector_duration / period : 0
+    # if the window's guaranteed to have `num_transits_to_confirm` transits
+    elseif floor((tess_sector_duration - period + duration) / (period + duration)) >= num_transits_to_confirm - 1
+        return 1.0
+    else
+        # find P of t0 being small enough
+        return (tess_sector_duration - (num_transits_to_confirm - 1) * period) / (period - duration)
+    end
+end
+
 """
     frac_depth_to_tps_depth(frac_depth)
 
@@ -378,7 +391,7 @@ Estimated CDPP at given transit duration for Kepler target.
 function interpolate_cdpp_to_duration_lookup_cdpp(t::KeplerTarget, duration::Float64)::Float64
    duration_in_hours = duration *24.0
    dur_idx = searchsortedlast(cdpp_durations,duration_in_hours)   # cdpp_durations is defined in constants.jl
-   get_cdpp(i::Integer) = 1.0e-6*sqrt(cdpp_durations[i]/24.0/LC_duration)*star_table(t,duration_symbols[i])
+   get_cdpp(i::Integer) = 1.0e-6*sqrt(cdpp_durations[i]/24.0/kepler_LC_duration)*star_table(t,duration_symbols[i])
 
    if dur_idx <= 0
       cdpp = get_cdpp(1)
@@ -412,9 +425,15 @@ Calculate the expected multiple event statistic (signal-to-noise ratio) for plan
 """
 function calc_snr_if_transit_cdpp(t::KeplerTarget, depth::Float64, duration::Float64, cdpp::Float64, sim_param::SimParam; num_transit::Float64 = 1)
   # depth_tps = frac_depth_to_tps_depth(depth)                  # TODO SCI:  WARNING: Hardcoded this conversion.  Remove once depth calculated using limb darkening model
-  # snr = depth_tps*sqrt(num_transit*duration*LC_rate)/cdpp     # WARNING: Assumes measurement uncertainties are uncorrelated & CDPP based on LC
-  snr = depth*sqrt(num_transit*duration*LC_rate)/cdpp     # WARNING: Assumes measurement uncertainties are uncorrelated & CDPP based on LC
+  # snr = depth_tps*sqrt(num_transit*duration*kepler_LC_rate)/cdpp     # WARNING: Assumes measurement uncertainties are uncorrelated & CDPP based on LC
+  snr = depth*sqrt(num_transit*duration*kepler_LC_rate)/cdpp     # WARNING: Assumes measurement uncertainties are uncorrelated & CDPP based on LC
 end
+
+function calc_snr_if_transit_cdpp(t::TESSTarget, depth::Float64, duration::Float64, noise::Float64, sim_param::SimParam; num_transit::Float64 = 1)
+    # depth_tps = frac_depth_to_tps_depth(depth)                  # TODO SCI:  WARNING: Hardcoded this conversion.  Remove once depth calculated using limb darkening model
+    # snr = depth_tps*sqrt(num_transit*duration*kepler_LC_rate)/cdpp     # WARNING: Assumes measurement uncertainties are uncorrelated & CDPP based on LC
+    snr = depth*sqrt(num_transit*duration*tess_LC_rate)/noise     # WARNING: Assumes measurement uncertainties are uncorrelated & CDPP based on LC
+  end
 
 """
     calc_snr_if_transit(t, depth, duration, osd, sim_param; num_transit = 1)
@@ -514,6 +533,11 @@ function calc_prob_detect_if_transit(t::KeplerTarget, snr::Float64, period::Floa
   min_pdet_nonzero = 1.0e-4                                                # TODO OPT: Consider raising threshold to prevent a plethora of planets that are very unlikely to be detected due to using 0.0 or other small value here
   wf = kepler_window_function(t, num_transit, period, duration)
   return wf*detection_efficiency_model(snr, num_transit, min_pdet_nonzero=min_pdet_nonzero)
+end
+
+function calc_prob_detect_if_transit(t::TESSTarget, snr::Array{Float64,1}, period::Float64, duration::Float64, sim_param::SimParam; num_transit::Float64 = 1)
+    # WARNING: just returns 1, until prob_detect for TESS is properly defined
+    return 1
 end
 
 function calc_prob_detect_if_transit(t::KeplerTarget, depth::Float64, period::Float64, duration::Float64, osd::Float64, sim_param::SimParam; num_transit::Float64 = 1)
@@ -677,7 +701,6 @@ Probability of detecting planet (if it transits) averaged over impact parameter
 function calc_ave_prob_detect_if_transit_from_snr(t::KeplerTarget, snr_central::Float64, period::Float64, duration_central::Float64, size_ratio::Float64, osd_central::Float64, sim_param::SimParam; num_transit::Float64 = 1)
   min_pdet_nonzero = 1.0e-4
   wf = kepler_window_function(t, num_transit, period, duration_central)
-
   detection_efficiency_central = detection_efficiency_model(snr_central, num_transit, min_pdet_nonzero=min_pdet_nonzero)
   if wf*detection_efficiency_central <= min_pdet_nonzero
      return 0.
@@ -719,6 +742,15 @@ function calc_ave_prob_detect_if_transit_from_snr(t::KeplerTarget, snr_central::
 
   return wf*ave_detection_efficiency
 end
+
+
+function calc_ave_prob_detect_if_transit_from_snr(t::TESSTarget, snr_central::Float64, period::Float64, duration_central::Float64, sim_param::SimParam, num_transit::Float64 = 1)
+    min_pdet_nonzero = 1.0e-4
+    # currently only uses info from one TESS sector at a time
+    # also, has no OSD information. TODO is incorporate this and make it more like the Kepler version.
+    wf = tess_window_function(t, num_transit, period, duration_central)
+    return detection_efficiency_model(snr_central, num_transit, min_pdet_nonzero=min_pdet_nonzero)
+  end
 
 """
     calc_ave_prob_detect_if_transit_from_snr_cdpp(t, snr_central, period, duration_central, size_ratio, osd_central, sim_param; num_transit = 1)

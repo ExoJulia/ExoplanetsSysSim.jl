@@ -14,20 +14,35 @@
 
  const kepler_exp_time_internal  =  6.019802903/(24*60*60)    # https://archive.stsci.edu/kepler/manuals/archive_manual.pdf
  const kepler_read_time_internal = 0.5189485261/(24*60*60)    # https://archive.stsci.edu/kepler/manuals/archive_manual.pdf
- const num_exposures_per_LC = 270
- const num_exposures_per_SC = 9
- const LC_integration_time = kepler_exp_time_internal*num_exposures_per_LC
- const SC_integration_time = kepler_exp_time_internal*num_exposures_per_SC
- const LC_read_time = kepler_read_time_internal*num_exposures_per_LC
- const SC_read_time = kepler_read_time_internal*num_exposures_per_SC
- const LC_duration = LC_integration_time +  LC_read_time
- const SC_duration = SC_integration_time +  SC_read_time
- const LC_rate = 1.0/LC_duration
- const SC_rate = 1.0/SC_duration
+ const num_exposures_per_kepler_LC = 270
+ const num_exposures_per_kepler_SC = 9
+ const kepler_LC_integration_time = kepler_exp_time_internal*num_exposures_per_kepler_LC
+ const kepler_SC_integration_time = kepler_exp_time_internal*num_exposures_per_kepler_SC
+ const kepler_LC_read_time = kepler_read_time_internal*num_exposures_per_kepler_LC
+ const kepler_SC_read_time = kepler_read_time_internal*num_exposures_per_kepler_SC
+ const kepler_LC_duration = kepler_LC_integration_time +  kepler_LC_read_time
+ const kepler_SC_duration = kepler_SC_integration_time +  kepler_SC_read_time
+ const kepler_LC_rate = 1.0/kepler_LC_duration
+ const kepler_SC_rate = 1.0/kepler_SC_duration
+
+ const tess_sector_duration = 27.4 # days
+ const tess_exp_time_internal = 96.0 / (24*60*60) # https://archive.stsci.edu/files/live/sites/mast/files/home/missions-and-data/active-missions/tess/_documents/TESS_Instrument_Handbook_v0.1.pdf
+ const tess_read_time_internal = 24.0 / (24*60*60)
+ const num_exposures_per_tess_LC = 15
+ const num_exposures_per_tess_SC = 1
+ const tess_LC_integration_time = tess_exp_time_internal * num_exposures_per_tess_LC
+ const tess_SC_integration_time = tess_exp_time_internal * num_exposures_per_tess_SC
+ const tess_LC_read_time = tess_read_time_internal*num_exposures_per_tess_LC
+ const tess_SC_read_time = tess_read_time_internal*num_exposures_per_tess_SC
+ const tess_LC_duration = tess_LC_integration_time +  tess_LC_read_time
+ const tess_SC_duration = tess_SC_integration_time +  tess_SC_read_time
+ const tess_LC_rate = 1.0/tess_LC_duration
+ const tess_SC_rate = 1.0/tess_SC_duration
+
 
 # export num_channels,num_modules,num_quarters,num_cdpp_timescales,mission_data_span,mission_duty_cycle
-# export kepler_exp_time_internal,kepler_read_time_internal,num_exposures_per_LC,num_exposures_per_SC
-# export LC_integration_time,SC_integration_time,LC_read_time,SC_read_time,LC_duration,SC_duration,LC_rate,SC_rate
+# export kepler_exp_time_internal,kepler_read_time_internal,num_exposures_per_kepler_LC,num_exposures_per_kepler_SC
+# export kepler_LC_integration_time,kepler_SC_integration_time,kepler_LC_read_time,kepler_SC_read_time,kepler_LC_duration,kepler_SC_duration,kepler_LC_rate,kepler_SC_rate
 #end
 
 #using KeplerConstants

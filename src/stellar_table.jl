@@ -1,6 +1,11 @@
 ## ExoplanetsSysSim/src/stellar_table.jl
 ## (c) 2015 Eric B. Ford
 
+## TODO Aditya: adapt to TESS (maybe add a new simparam variable indicating mission)
+## specifically, the rows to be preserved may need changing
+
+# this is a wrapper around a stellar dataframe
+
 module StellarTable
 using ExoplanetsSysSim
 #using DataArrays
@@ -14,7 +19,7 @@ using FileIO
 #  import Compat: UTF8String, ASCIIString
 #end
 
-export setup_star_table, star_table, num_usable_in_star_table, set_star_table, star_table_has_key
+export setup_star_table, star_table, num_usable_in_star_table, set_star_table, star_table_has_key, columns_in_star_table
 
 df = DataFrame()
 
@@ -26,7 +31,7 @@ function setup(sim_param::SimParam; force_reread::Bool = false)
      return df
      #return data
   end
-  stellar_catalog_filename = convert(String,joinpath(dirname(pathof(ExoplanetsSysSim)), "..","data", convert(String,get(sim_param,"stellar_catalog","q1_q17_dr24_stellar.csv")) ) )
+  stellar_catalog_filename = convert(String,joinpath(dirname(pathof(ExoplanetsSysSim)), "..","data", convert(String,get(sim_param,"stellar_catalog")) ) )
   df = setup(stellar_catalog_filename)
   add_param_fixed(sim_param,"read_stellar_catalog",true)
   add_param_fixed(sim_param,"num_kepler_targets",num_usable_in_star_table())
@@ -56,8 +61,9 @@ function setup(filename::String; force_reread::Bool = false)
   # See options at: http://exoplanetarchive.ipac.caltech.edu/docs/API_keplerstellar_columns.html
   # Now we read in all CDPP's, so can interpolate to transit duration
   symbols_to_keep = [ :kepid, :mass, :mass_err1, :mass_err2, :radius, :radius_err1, :radius_err2, :dens, :dens_err1, :dens_err2, :rrmscdpp01p5, :rrmscdpp02p0, :rrmscdpp02p5, :rrmscdpp03p0, :rrmscdpp03p5, :rrmscdpp04p5, :rrmscdpp05p0, :rrmscdpp06p0, :rrmscdpp07p5, :rrmscdpp09p0, :rrmscdpp10p5, :rrmscdpp12p0, :rrmscdpp12p5, :rrmscdpp15p0, :cdppslplong, :cdppslpshrt, :dataspan, :dutycycle, :limbdark_coeff1, :limbdark_coeff2, :limbdark_coeff3, :limbdark_coeff4 ]
-
+  # tess setup does not go through here
   delete!(df, [~(x in symbols_to_keep) for x in names(df)])    # delete columns that we won't be using anyway
+  # until I can put in actual TIC limb-darkening coefficients, am setting all of them to zero.
   is_usable = [ !any(ismissing.([ df[i,j] for j in 1:size(df,2) ])) for i in 1:size(df,1) ]
   usable = find(is_usable)
   df = df[usable, symbols_to_keep]
@@ -76,6 +82,11 @@ setup_star_table(filename::String) = setup(filename)
 function num_usable_in_star_table()
   global df
   return size(df,1)
+end
+
+function columns_in_star_table()
+  global df
+  return names(df)
 end
 
 function star_table(i::Integer, sym::Symbol)

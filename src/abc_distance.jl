@@ -162,7 +162,7 @@ Calculate L2 distance and the number of simulated planets detected for a binned 
 - Number of detected simulated planets
 """
 function distance_sum_of_bernoulli_draws(num_pl_obs::Integer, num_targets_obs::Integer, prob_detect_list::Vector{TReal}, num_targets_sim::Integer, bin_match_list::Vector{TInt}) where {TReal<:Real, TInt<:Integer}
-   @assert(0<=num_pl_obs<=num_targets_obs)
+  @assert(0<=num_pl_obs<=num_targets_obs)
    num_pl_match = length(bin_match_list)
    @assert(0<=length(bin_match_list))
 

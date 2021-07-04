@@ -58,16 +58,18 @@ export setup_window_function, get_window_function_data, get_window_function_id, 
 include("stellar_table.jl")
 export  StellarTable
 export setup_star_table, star_table, num_usable_in_star_table, set_star_table, star_table_has_key
-export KeplerTarget
+export KeplerTarget, TESSTarget
 export num_planets, generate_kepler_target_from_table, generate_kepler_target_simple
 include("target.jl")
-export KeplerTargetObs
+export KeplerTargetObs, TESSTargetObs
 include("transit_observations.jl")
 export semimajor_axis, period_given_semimajor_axis
 #export setup_koi_table, koi_table, num_koi
-export KeplerPhysicalCatalog, KeplerObsCatalog
+export KeplerPhysicalCatalog, KeplerObsCatalog, TESSPhysicalCatalog, TESSObsCatalog
 include("kepler_catalog.jl")
-export generate_kepler_physical_catalog, observe_kepler_targets_single_obs, observe_kepler_targets_sky_avg, simulated_read_kepler_observations, setup_actual_planet_candidate_catalog, read_koi_catalog
+export generate_kepler_physical_catalog, observe_kepler_targets_single_obs, observe_kepler_targets_sky_avg, simulated_read_kepler_observations, setup_actual_pc_catalog_kepler, read_koi_catalog
+include("tess_catalog.jl")
+export generate_tess_physical_catalog, observe_tess_targets_single_obs, observe_tess_targets_sky_avg, simulated_read_tess_observations, setup_actual_pc_catalog_tess, read_toi_catalog
 export CatalogSummaryStatistics
 include("summary_statistics.jl")
 export calc_summary_stats_obs_demo, calc_summary_stats_sim_pass_one_demo, calc_summary_stats_sim_pass_two_demo

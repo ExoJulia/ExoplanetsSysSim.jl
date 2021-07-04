@@ -118,6 +118,7 @@ end
 
 # Test if this planetary system has at least one planet that transits (assuming a single observer)
 function select_targets_one_obs(ps::PlanetarySystemAbstract)
+## REFACTOR MARKER: NOT KEPLER SPECIFIC
  for pl in 1:length(ps.orbit)
    ecc::Float64 = ps.orbit[pl].ecc
    incl::Float64 = ps.orbit[pl].incl
@@ -193,7 +194,7 @@ Wrapper function to read Kepler Object of Interest (KOI) catalog given SimParam
 
 # Arguments:
 - `sim_param::SimParam`: Simulation parameter object; this function uses the following parameters from the SimParam object:
-  - koi_catalog: String filename of Kepler Object of Interest catalog (if not provided, defaults to "q1_q17_dr25_koi.csv"
+  - planetary_catalog: String filename of Kepler Object of Interest catalog (if not provided, defaults to "q1_q17_dr25_koi.csv"
 - `force_reread::Bool`: Should the file be read in even if a DataFrame of the KOIs already exists in workspace?
 
 # Returns:
@@ -201,7 +202,7 @@ Wrapper function to read Kepler Object of Interest (KOI) catalog given SimParam
 - Vector of booleans indicating which KOIs  were designated as planet candidates by the Kepler pipeline and have a valid observed radius ratio and period (necessary for detection probability calculation).
 """
 function read_koi_catalog(sim_param::SimParam, force_reread::Bool = false)
-    filename = convert(String,joinpath(dirname(pathof(ExoplanetsSysSim)),"..", "data", convert(String,get(sim_param,"koi_catalog","q1_q17_dr25_koi.csv")) ) )
+    filename = convert(String,joinpath(dirname(pathof(ExoplanetsSysSim)),"..", "data", convert(String,get(sim_param,"planetary_catalog","q1_q17_dr25_koi.csv")) ) )
     return read_koi_catalog(filename, force_reread)
 end
 
@@ -224,7 +225,7 @@ function read_koi_catalog(filename::String, force_reread::Bool = false)
     if occursin(r".jld2$",filename) && !force_reread
         try
             data = load(filename)
-            df = data["koi_catalog"]
+            df = data["planetary_catalog"]
             usable = data["koi_catalog_usable"]
             Core.typeassert(df,DataFrame)
             Core.typeassert(usable,Array{Int64,1})
@@ -259,7 +260,7 @@ function read_koi_catalog(filename::String, force_reread::Bool = false)
 end
 
 """
-    setup_actual_planet_candidate_catalog(df_star, df_koi, usable_koi, sim_param)
+  setup_actual_pc_catalog_kepler(df_star, df_koi, usable_koi, sim_param)
 
 Create (true) catalog of Kepler observations of Kepler targets
 
@@ -273,7 +274,7 @@ Create (true) catalog of Kepler observations of Kepler targets
 # Returns:
 - Kepler observations catalog containing Kepler targets and associated KOIs (to be used as true catalog in comparison with simulated observations)
 """
-function setup_actual_planet_candidate_catalog(df_star::DataFrame, df_koi::DataFrame, usable_koi::Array{Int64}, sim_param::SimParam)
+function setup_actual_pc_catalog_kepler(df_star::DataFrame, df_koi::DataFrame, usable_koi::Array{Int64}, sim_param::SimParam)
     local target_obs, num_pl
     df_koi = df_koi[usable_koi,:]
 
@@ -312,7 +313,7 @@ function setup_actual_planet_candidate_catalog(df_star::DataFrame, df_koi::DataF
 
     output = KeplerObsCatalog()
     sort!(df_star, (:kepid))
-    df_obs = join(df_star, df_koi, on = :kepid)
+    df_obs = innerjoin(df_star, df_koi, on = :kepid)
     #df_obs = sort!(df_obs, cols=(:kepid))
     df_obs = sort!(df_obs, (:kepid))
 
@@ -386,6 +387,8 @@ function calc_prob_detect_list(cat::KeplerPhysicalCatalog, sim_param::SimParam)
 end
 
 function test_catalog_constructors(sim_param::SimParam)
+  ## REFACTOR MARKER: NOT KEPLER SPECIFIC
+  # or maybe it is if it _seriously_ depends on CDPPs
   cat_phys = generate_kepler_physical_catalog(sim_param)::KeplerPhysicalCatalog
   id = findfirst( x->num_planets(x)>=1 , cat_phys.target)   # fast forward to first target that has some planets
   @assert(length(id)>=1)

@@ -1,0 +1,19 @@
+# All accepted parameters are listed
+# To use default parameters, add a '#' character at the beginning of the line
+
+stellar_catalog = "tesstargets/tess_stellar_all.csv"
+planetary_catalog = "tesstargets/toi_catalog.csv"
+#osd_file = "inputs/dr25fgk_relaxcut_osds.jld2"
+
+num_targ_sim = 1000                       # number of planetary systems in simulated catalogs
+                                             # [DEFAULT = same size as observed catalog]
+
+#p_bin_lim = [237., 500.]                     # bin boundaries for orbital period (days) [NO DEFAULT VALUE]
+#r_bin_lim = [0.5, 0.75, 1., 1.25, 1.5, 1.75]                       # bin boundaries for planet radius (R_earth) [NO DEFAULT VALUE]
+p_bin_lim = [0.01, 0.05, 0.1, 0.25, 0.5, 1., 2., 4., 8., 16., 32.]
+r_bin_lim = [0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 1., 1.25, 1.5, 1.75, 2., 2.5, 3., 4.] 
+
+#rate_init = 1.0                             # initial guess for occurrence rates (percent) [DEFAULT = 1.0 for all bins]
+                                             # can be single rate (applied to all bins) or array of rates
+                                             # (axis 1 = radius; axis 2 = period)
+                                             # (1D array reshaped along increasing radius first, then period)
