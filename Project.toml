@@ -1,7 +1,7 @@
 name = "ExoplanetsSysSim"
 uuid = "e0ba718c-02ec-11e9-384b-dd2930072415"
 authors = ["Eric Ford <eford@psu.edu>"]
-version = "1.1.0"
+version = "1.2.0"
 
 [deps]
 CORBITS = "19bfd68b-3085-5123-a7aa-2ec83b867ca4"
@@ -26,17 +26,16 @@ StatsFuns = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
 
 [compat]
 CORBITS = "1"
-CSV = "0.8, 0.10"
+CSV = "0.10"
 Combinatorics = "1"
 Compat = "2.1, 2.2, 3, 4"
-DataFrames = "0.17, 0.18, 0.19, 0.20, 0.21, 1"
+DataFrames = "1"
 Distributions = "0.20, 0.21, 0.22, 0.23, 0.24, 0.25"
 FileIO = "1"
 HDF5 = "0.13, 0.16"
 HypothesisTests = "0.8, 0.9, 0.10"
-#JLD = "0.9"
-JLD2 = "0.1.2, 0.2, 0.3, 0.4"
+JLD2 = "0.4"
 PDMats = "0.9, 0.10, 0.11"
-SpecialFunctions = "0.7, 0.8, 0.9, 1"
-StatsFuns = "0.9, 1"
-julia = "1.4, 1.5, 1.6, 1.7, 1.8"
+SpecialFunctions = "1"
+StatsFuns = "1"
+julia = "1.6, 1.7, 1.8"
