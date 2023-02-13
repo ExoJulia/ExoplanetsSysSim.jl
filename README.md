@@ -4,7 +4,7 @@
 Welcome to the ExoplanetsSysSim package for generating planetary systems and simulating observations of those systems with a transit survey.  Currently, SysSim focuses on NASA's Kepler mission, but we've aimed to develop a generic framework that can be applied to other surveys (e.g., K2, TESS, PLATO, LSST, etc.).
 
 ## How to install ExoplanetsSysSim:
-* Make sure you have julia (v0.7 or greater) installed.  It's been tested on Julia v1.1.0.  You can download Julia [here](https://julialang.org/downloads/).
+* Make sure you have julia (v1.6 or greater) installed.  You can download Julia [here](https://julialang.org/downloads/).
 
 * Make sure you have a recent git and [git-lfs](https://git-lfs.github.com/) installed.
 If you're using ICS-ACI, then do this by running the following for each shell (or putting it in your .bashrc)
@@ -35,7 +35,7 @@ git lfs fetch # if the binary data files didn't download automatically
 ```sh
 export JULIA_DEPOT_PATH=~/.julia_clean
 ```
-On ICS-ACI, it's useful to set your JULIA_DEPOT_PATH to be in your work directory, as that is higher performance and has more space than your home directory.  I've put this in my .bashrc, so I don't forget and get confused about what's being modified.  E.g., 
+On ICS-ACI/Roar, it's useful to set your JULIA_DEPOT_PATH to be in your work directory, as that is higher performance and has more space than your home directory.  I've put this in my .bashrc, so I don't forget and get confused about what's being modified.  E.g., 
 ```sh
 export JULIA_DEPOT_PATH=~/work/.julia
 ```
@@ -95,7 +95,7 @@ using ExoplanetsSysSim
 
 * Cite relevant code and associated publications
   - [![DOI](https://zenodo.org/badge/179777476.svg)](https://zenodo.org/badge/latestdoi/179777476) Citation for core SysSim code base.
-  - [Hsu et al. (2018) *AJ* 155, 205.](https://arxiv.org/ct?url=https%3A%2F%2Fdx.doi.org%2F10.3847%2F1538-3881%2Faab9a8&v=19ae32f8):   First published paper, describes basic SysSim functionality pre-1.0 version, please cite until Hsu et al. 2019 is accepted.
+  - [Hsu et al. (2018) *AJ* 155, 205.](https://arxiv.org/ct?url=https%3A%2F%2Fdx.doi.org%2F10.3847%2F1538-3881%2Faab9a8&v=19ae32f8):   First published paper, describes basic SysSim functionality pre-1.0 version.
   - [Hsu et al. (2019) *AJ* 158, 3.](https://doi.org/10.3847/1538-3881/ab31ab)  "Occurrence Rates of Planets Orbiting FGK Stars: Combining Kepler DR25, Gaia DR2, and Bayesian Inference":  Describes improvements to model for Kepler pipeline in SysSim v1.0, please cite if using SysSim v1.
   - [Hsu, Ford & Terrien (2020) *MNRAS* 498, 2249-2262.](https://ui.adsabs.harvard.edu/abs/2020MNRAS.498.2249H/abstract) "Occurrence Rates of Planets Orbiting M Stars: Applying ABC to Kepler DR25, Gaia DR2, and 2MASS Data": Describes tweaks for M stars. Please cite for occurence rates for M (and late K) stars.
   - [He, Ford, & Ragozzine (2019) *MNRAS* 490, 4575-4605.](https://doi.org/10.1093/mnras/stz2869) "Architectures of Exoplanetary Systems. I: A Clustered Forward Model for Exoplanetary Systems Around Kepler’s FGK Stars": Describes model for generating planetary systems, uses SysSim v1.0. Please cite if using clustered model with two populations with different inclination distributions.
@@ -132,13 +132,14 @@ using ExoplanetsSysSim
   * Origins of Solar Systems program, award NNX14AI76G
   * Exoplanets Research Program, award NNX15AE21G
 * [The Pennsylvania State University](https://www.psu.edu/)
-  * [Dept. of Astronomy & Astrophysics](http://astro.psu.edu/)
+  * [Dept. of Astronomy & Astrophysics](http://science.psu.edu/astro/)
   * [Center for Exoplanets & Habitable Worlds](https://exoplanets.psu.edu/)
   * [Eberly College of Science](http://science.psu.edu/)
-  * [Institute for CyberScience](https://ics.psu.edu/)
+  * [Institute for Computational & Data Sciences](https://icds.psu.edu/)
   * [Center for Astrostatistics](https://astrostatistics.psu.edu/)
-  * [Penn State Astrobiology Research Center](http://psarc.weebly.com/)
+  * [Penn State Astrobiology Research Center](https://astrobiology.psu.edu/)
 * [Brigham Young University](https://www.physics.byu.edu/)
 * [University of Florida](https://www.ufl.edu/)
 * [Florida Institute of Technology](https://www.fit.edu/)
-* [Statistical and Applied Mathematical Sciences Institute](https://www.samsi.info/)
+* Statistical and Applied Mathematical Sciences Institute
+
